@@ -1,0 +1,93 @@
+package http
+
+import (
+	"bufio"
+	"errors"
+	"github.com/hslam/transport"
+	"io"
+	"net"
+	"net/http"
+	"runtime"
+)
+
+var numCPU = runtime.NumCPU()
+
+const (
+	//HTTPConnected defines the http connected.
+	HTTPConnected = "200 Connected to Server"
+	//HTTPPath defines the http path.
+	HTTPPath = "/"
+)
+
+type HTTP struct {
+}
+
+// NewTransport returns a new HTTP transport.
+func NewTransport() transport.Transport {
+	return &HTTP{}
+}
+func (t *HTTP) Dial(address string) (transport.Conn, error) {
+	var err error
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	io.WriteString(conn, "CONNECT "+HTTPPath+" HTTP/1.1\n\n")
+	resp, err := http.ReadResponse(bufio.NewReader(conn), &http.Request{Method: "CONNECT"})
+	if err != nil || resp.Status != HTTPConnected {
+		if err == nil {
+			err = errors.New("unexpected HTTP response: " + resp.Status)
+		}
+		conn.Close()
+		return nil, &net.OpError{
+			Op:   "dial-http",
+			Net:  "tcp" + " " + address,
+			Addr: nil,
+			Err:  err,
+		}
+	}
+	return conn, err
+}
+
+func (t *HTTP) Listen(address string) (transport.Listener, error) {
+	httpServer := &http.Server{
+		Addr: address,
+	}
+	h := new(handler)
+	h.conn = make(chan net.Conn, numCPU*512)
+	httpServer.Handler = h
+	go httpServer.ListenAndServe()
+	return &HTTPListener{httpServer: httpServer, handler: h}, nil
+}
+
+type HTTPListener struct {
+	httpServer *http.Server
+	handler    *handler
+}
+
+func (l *HTTPListener) Accept() (transport.Conn, error) {
+	if conn, ok := <-l.handler.conn; ok {
+		return conn, nil
+	}
+	return nil, errors.New("http: Server closed")
+}
+
+type handler struct {
+	conn chan net.Conn
+}
+
+func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method == "CONNECT" {
+		conn, _, err := w.(http.Hijacker).Hijack()
+		if err != nil {
+			return
+		}
+		io.WriteString(conn, "HTTP/1.0 "+HTTPConnected+"\n\n")
+		h.conn <- conn
+	} else {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		io.WriteString(w, "405 must CONNECT\n")
+	}
+}
