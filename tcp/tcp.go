@@ -1,16 +1,22 @@
 package tcp
 
 import (
-	"github.com/hslam/transport"
+	"crypto/tls"
+	"hslam.com/git/x/transport"
 	"net"
 )
 
 type TCP struct {
+	Config *tls.Config
 }
 
 // NewTransport returns a new TCP transport.
 func NewTransport() transport.Transport {
 	return &TCP{}
+}
+
+func NewTLSTransport(config *tls.Config) transport.Transport {
+	return &TCP{Config: config}
 }
 func (t *TCP) Dial(address string) (transport.Conn, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", address)
@@ -22,21 +28,48 @@ func (t *TCP) Dial(address string) (transport.Conn, error) {
 		return nil, err
 	}
 	conn.SetNoDelay(true)
-	return conn, err
+	if t.Config == nil {
+		return conn, err
+	}
+	t.Config.ServerName = address
+	tlsConn := tls.Client(conn, t.Config)
+	if err = tlsConn.Handshake(); err != nil {
+		tlsConn.Close()
+		return nil, err
+	}
+	return tlsConn, err
 }
 
 func (t *TCP) Listen(address string) (transport.Listener, error) {
-	lis, err := net.Listen("tcp", address)
+	tcpAddr, err := net.ResolveTCPAddr("tcp4", address)
 	if err != nil {
 		return nil, err
 	}
-	return &TCPListener{lis}, err
+	lis, err := net.ListenTCP("tcp", tcpAddr)
+	if err != nil {
+		return nil, err
+	}
+	return &TCPListener{l: lis, config: t.Config}, err
 }
 
 type TCPListener struct {
-	l net.Listener
+	l      *net.TCPListener
+	config *tls.Config
 }
 
 func (l *TCPListener) Accept() (transport.Conn, error) {
-	return l.l.Accept()
+	if conn, err := l.l.AcceptTCP(); err != nil {
+		return nil, err
+	} else {
+		conn.SetNoDelay(true)
+		if l.config == nil {
+			return conn, err
+		}
+		tlsConn := tls.Server(conn, l.config)
+		if err = tlsConn.Handshake(); err != nil {
+			tlsConn.Close()
+			return nil, err
+		}
+		return tlsConn, err
+	}
 }

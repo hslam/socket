@@ -2,8 +2,9 @@ package http
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
-	"github.com/hslam/transport"
+	"hslam.com/git/x/transport"
 	"io"
 	"net"
 	"net/http"
@@ -20,11 +21,15 @@ const (
 )
 
 type HTTP struct {
+	Config *tls.Config
 }
 
 // NewTransport returns a new HTTP transport.
 func NewTransport() transport.Transport {
 	return &HTTP{}
+}
+func NewTLSTransport(config *tls.Config) transport.Transport {
+	return &HTTP{Config: config}
 }
 func (t *HTTP) Dial(address string) (transport.Conn, error) {
 	var err error
@@ -46,7 +51,16 @@ func (t *HTTP) Dial(address string) (transport.Conn, error) {
 			Err:  err,
 		}
 	}
-	return conn, err
+	if t.Config == nil {
+		return conn, err
+	}
+	t.Config.ServerName = address
+	tlsConn := tls.Client(conn, t.Config)
+	if err = tlsConn.Handshake(); err != nil {
+		tlsConn.Close()
+		return nil, err
+	}
+	return tlsConn, err
 }
 
 func (t *HTTP) Listen(address string) (transport.Listener, error) {
@@ -57,17 +71,26 @@ func (t *HTTP) Listen(address string) (transport.Listener, error) {
 	h.conn = make(chan net.Conn, numCPU*512)
 	httpServer.Handler = h
 	go httpServer.ListenAndServe()
-	return &HTTPListener{httpServer: httpServer, handler: h}, nil
+	return &HTTPListener{httpServer: httpServer, handler: h, config: t.Config}, nil
 }
 
 type HTTPListener struct {
 	httpServer *http.Server
 	handler    *handler
+	config     *tls.Config
 }
 
 func (l *HTTPListener) Accept() (transport.Conn, error) {
 	if conn, ok := <-l.handler.conn; ok {
-		return conn, nil
+		if l.config == nil {
+			return conn, nil
+		}
+		tlsConn := tls.Server(conn, l.config)
+		if err := tlsConn.Handshake(); err != nil {
+			tlsConn.Close()
+			return nil, err
+		}
+		return tlsConn, nil
 	}
 	return nil, errors.New("http: Server closed")
 }
