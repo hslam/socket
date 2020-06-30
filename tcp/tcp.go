@@ -2,7 +2,7 @@ package tcp
 
 import (
 	"crypto/tls"
-	"hslam.com/git/x/transport"
+	"github.com/hslam/transport"
 	"net"
 )
 

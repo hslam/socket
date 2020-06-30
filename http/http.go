@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
-	"hslam.com/git/x/transport"
+	"github.com/hslam/transport"
 	"io"
 	"net"
 	"net/http"
