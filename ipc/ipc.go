@@ -15,9 +15,15 @@ type IPC struct {
 func NewTransport() transport.Transport {
 	return &IPC{}
 }
+
 func NewTLSTransport(config *tls.Config) transport.Transport {
 	return &IPC{Config: config}
 }
+
+func (t *IPC) Scheme() string {
+	return "ipc"
+}
+
 func (t *IPC) Dial(address string) (transport.Conn, error) {
 	var addr *net.UnixAddr
 	var err error
@@ -75,4 +81,8 @@ func (l *IPCListener) Accept() (transport.Conn, error) {
 		return tlsConn, err
 	}
 	return l.l.Accept()
+}
+
+func (l *IPCListener) Close() error {
+	return l.l.Close()
 }

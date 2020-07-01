@@ -28,9 +28,15 @@ type HTTP struct {
 func NewTransport() transport.Transport {
 	return &HTTP{}
 }
+
 func NewTLSTransport(config *tls.Config) transport.Transport {
 	return &HTTP{Config: config}
 }
+
+func (t *HTTP) Scheme() string {
+	return "http"
+}
+
 func (t *HTTP) Dial(address string) (transport.Conn, error) {
 	var err error
 	conn, err := net.Dial("tcp", address)
@@ -93,6 +99,10 @@ func (l *HTTPListener) Accept() (transport.Conn, error) {
 		return tlsConn, nil
 	}
 	return nil, errors.New("http: Server closed")
+}
+
+func (l *HTTPListener) Close() error {
+	return l.httpServer.Close()
 }
 
 type handler struct {

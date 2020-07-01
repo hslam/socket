@@ -18,6 +18,11 @@ func NewTransport() transport.Transport {
 func NewTLSTransport(config *tls.Config) transport.Transport {
 	return &TCP{Config: config}
 }
+
+func (t *TCP) Scheme() string {
+	return "tcp"
+}
+
 func (t *TCP) Dial(address string) (transport.Conn, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", address)
 	if err != nil {
@@ -72,4 +77,8 @@ func (l *TCPListener) Accept() (transport.Conn, error) {
 		}
 		return tlsConn, err
 	}
+}
+
+func (l *TCPListener) Close() error {
+	return l.l.Close()
 }
