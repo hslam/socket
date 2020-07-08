@@ -24,6 +24,14 @@ type HTTP struct {
 	Config *tls.Config
 }
 
+type HTTPConn struct {
+	io.ReadWriteCloser
+}
+
+func (c *HTTPConn) Message() socket.Message {
+	return socket.NewMessage(c, 0, 0)
+}
+
 // NewSocket returns a new HTTP socket.
 func NewSocket() socket.Socket {
 	return &HTTP{}
@@ -61,7 +69,7 @@ func (t *HTTP) Dial(address string) (socket.Conn, error) {
 		}
 	}
 	if t.Config == nil {
-		return conn, err
+		return &HTTPConn{conn}, err
 	}
 	t.Config.ServerName = address
 	tlsConn := tls.Client(conn, t.Config)
@@ -69,7 +77,7 @@ func (t *HTTP) Dial(address string) (socket.Conn, error) {
 		tlsConn.Close()
 		return nil, err
 	}
-	return tlsConn, err
+	return &HTTPConn{tlsConn}, err
 }
 
 func (t *HTTP) Listen(address string) (socket.Listener, error) {
@@ -92,14 +100,14 @@ type HTTPListener struct {
 func (l *HTTPListener) Accept() (socket.Conn, error) {
 	if conn, ok := <-l.handler.conn; ok {
 		if l.config == nil {
-			return conn, nil
+			return &HTTPConn{conn}, nil
 		}
 		tlsConn := tls.Server(conn, l.config)
 		if err := tlsConn.Handshake(); err != nil {
 			tlsConn.Close()
 			return nil, err
 		}
-		return tlsConn, nil
+		return &HTTPConn{tlsConn}, nil
 	}
 	return nil, errors.New("http: Server closed")
 }

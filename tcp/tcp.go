@@ -3,11 +3,20 @@ package tcp
 import (
 	"crypto/tls"
 	"github.com/hslam/socket"
+	"io"
 	"net"
 )
 
 type TCP struct {
 	Config *tls.Config
+}
+
+type TCPConn struct {
+	io.ReadWriteCloser
+}
+
+func (c *TCPConn) Message() socket.Message {
+	return socket.NewMessage(c, 0, 0)
 }
 
 // NewSocket returns a new TCP socket.
@@ -37,7 +46,7 @@ func (t *TCP) Dial(address string) (socket.Conn, error) {
 	}
 	conn.SetNoDelay(false)
 	if t.Config == nil {
-		return conn, err
+		return &TCPConn{conn}, err
 	}
 	t.Config.ServerName = address
 	tlsConn := tls.Client(conn, t.Config)
@@ -45,7 +54,7 @@ func (t *TCP) Dial(address string) (socket.Conn, error) {
 		tlsConn.Close()
 		return nil, err
 	}
-	return tlsConn, err
+	return &TCPConn{tlsConn}, err
 }
 
 func (t *TCP) Listen(address string) (socket.Listener, error) {
@@ -71,14 +80,14 @@ func (l *TCPListener) Accept() (socket.Conn, error) {
 	} else {
 		conn.SetNoDelay(false)
 		if l.config == nil {
-			return conn, err
+			return &TCPConn{conn}, err
 		}
 		tlsConn := tls.Server(conn, l.config)
 		if err = tlsConn.Handshake(); err != nil {
 			tlsConn.Close()
 			return nil, err
 		}
-		return tlsConn, err
+		return &TCPConn{tlsConn}, err
 	}
 }
 

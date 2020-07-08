@@ -3,12 +3,21 @@ package ipc
 import (
 	"crypto/tls"
 	"github.com/hslam/socket"
+	"io"
 	"net"
 	"os"
 )
 
 type IPC struct {
 	Config *tls.Config
+}
+
+type IPCConn struct {
+	io.ReadWriteCloser
+}
+
+func (c *IPCConn) Message() socket.Message {
+	return socket.NewMessage(c, 0, 0)
 }
 
 // NewSocket returns a new IPC socket.
@@ -38,7 +47,7 @@ func (t *IPC) Dial(address string) (socket.Conn, error) {
 		return nil, err
 	}
 	if t.Config == nil {
-		return conn, err
+		return &IPCConn{conn}, err
 	}
 	t.Config.ServerName = address
 	tlsConn := tls.Client(conn, t.Config)
@@ -46,7 +55,7 @@ func (t *IPC) Dial(address string) (socket.Conn, error) {
 		tlsConn.Close()
 		return nil, err
 	}
-	return tlsConn, err
+	return &IPCConn{tlsConn}, err
 }
 
 func (t *IPC) Listen(address string) (socket.Listener, error) {
@@ -74,16 +83,15 @@ func (l *IPCListener) Accept() (socket.Conn, error) {
 		return nil, err
 	} else {
 		if l.config == nil {
-			return conn, err
+			return &IPCConn{conn}, err
 		}
 		tlsConn := tls.Server(conn, l.config)
 		if err = tlsConn.Handshake(); err != nil {
 			tlsConn.Close()
 			return nil, err
 		}
-		return tlsConn, err
+		return &IPCConn{tlsConn}, err
 	}
-	return l.l.Accept()
 }
 
 func (l *IPCListener) Close() error {

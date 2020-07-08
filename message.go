@@ -4,6 +4,8 @@ import (
 	"io"
 )
 
+var BufferSize = 65536
+
 type Message interface {
 	SetReader(io.Reader)
 	GetReader() io.Reader
@@ -11,8 +13,10 @@ type Message interface {
 	GetWriter() io.Writer
 	SetCloser(io.Closer)
 	GetCloser() io.Closer
-	ReadMessage() (p []byte, err error)
-	WriteMessage(b []byte) (err error)
+	SetReadBufferSize(int)
+	SetWriteBufferSize(int)
+	ReadMessage() ([]byte, error)
+	WriteMessage([]byte) error
 	Close() error
 }
 
@@ -20,21 +24,24 @@ type message struct {
 	Reader io.Reader
 	Writer io.Writer
 	Closer io.Closer
-	Send   []byte
+	Write  []byte
 	Read   []byte
 	buffer []byte
 }
 
-func NewMessage(r io.Reader, w io.Writer, c io.Closer, bufferSize int) Message {
-	if bufferSize < 1 {
-		bufferSize = 1024
+func NewMessage(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int) Message {
+	if writeBufferSize < 1 {
+		writeBufferSize = BufferSize
+	}
+	if readBufferSize < 1 {
+		readBufferSize = BufferSize
 	}
 	return &message{
-		Reader: r,
-		Writer: w,
-		Closer: c,
-		Send:   make([]byte, bufferSize+8),
-		Read:   make([]byte, bufferSize),
+		Reader: rwc,
+		Writer: rwc,
+		Closer: rwc,
+		Write:  make([]byte, writeBufferSize),
+		Read:   make([]byte, readBufferSize),
 	}
 }
 
@@ -60,6 +67,14 @@ func (m *message) SetCloser(c io.Closer) {
 
 func (m *message) GetCloser() io.Closer {
 	return m.Closer
+}
+
+func (m *message) SetReadBufferSize(s int) {
+	m.Read = make([]byte, s)
+}
+
+func (m *message) SetWriteBufferSize(s int) {
+	m.Write = make([]byte, s)
 }
 
 func (m *message) ReadMessage() (p []byte, err error) {
@@ -107,13 +122,13 @@ func (m *message) ReadMessage() (p []byte, err error) {
 func (m *message) WriteMessage(b []byte) error {
 	var length = uint64(len(b))
 	var size = 8 + length
-	if uint64(cap(m.Send)) >= size {
-		m.Send = m.Send[:size]
+	if uint64(cap(m.Write)) >= size {
+		m.Write = m.Write[:size]
 	} else {
-		m.Send = make([]byte, size)
+		m.Write = make([]byte, size)
 	}
 	var t = length
-	var buf = m.Send[0:8]
+	var buf = m.Write[0:8]
 	buf[0] = uint8(t)
 	buf[1] = uint8(t >> 8)
 	buf[2] = uint8(t >> 16)
@@ -122,8 +137,8 @@ func (m *message) WriteMessage(b []byte) error {
 	buf[5] = uint8(t >> 40)
 	buf[6] = uint8(t >> 48)
 	buf[7] = uint8(t >> 56)
-	copy(m.Send[8:], b)
-	_, err := m.Writer.Write(m.Send[:size])
+	copy(m.Write[8:], b)
+	_, err := m.Writer.Write(m.Write[:size])
 	return err
 }
 
