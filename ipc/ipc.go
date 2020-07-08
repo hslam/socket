@@ -2,7 +2,7 @@ package ipc
 
 import (
 	"crypto/tls"
-	"github.com/hslam/network"
+	"github.com/hslam/socket"
 	"net"
 	"os"
 )
@@ -12,11 +12,11 @@ type IPC struct {
 }
 
 // NewSocket returns a new IPC socket.
-func NewSocket() network.Socket {
+func NewSocket() socket.Socket {
 	return &IPC{}
 }
 
-func NewTLSSocket(config *tls.Config) network.Socket {
+func NewTLSSocket(config *tls.Config) socket.Socket {
 	return &IPC{Config: config}
 }
 
@@ -27,7 +27,7 @@ func (t *IPC) Scheme() string {
 	return "ipcs"
 }
 
-func (t *IPC) Dial(address string) (network.Conn, error) {
+func (t *IPC) Dial(address string) (socket.Conn, error) {
 	var addr *net.UnixAddr
 	var err error
 	if addr, err = net.ResolveUnixAddr("unix", address); err != nil {
@@ -49,7 +49,7 @@ func (t *IPC) Dial(address string) (network.Conn, error) {
 	return tlsConn, err
 }
 
-func (t *IPC) Listen(address string) (network.Listener, error) {
+func (t *IPC) Listen(address string) (socket.Listener, error) {
 	os.Remove(address)
 	var addr *net.UnixAddr
 	var err error
@@ -69,7 +69,7 @@ type IPCListener struct {
 	config *tls.Config
 }
 
-func (l *IPCListener) Accept() (network.Conn, error) {
+func (l *IPCListener) Accept() (socket.Conn, error) {
 	if conn, err := l.l.Accept(); err != nil {
 		return nil, err
 	} else {

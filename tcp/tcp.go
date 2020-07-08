@@ -2,7 +2,7 @@ package tcp
 
 import (
 	"crypto/tls"
-	"github.com/hslam/network"
+	"github.com/hslam/socket"
 	"net"
 )
 
@@ -11,11 +11,11 @@ type TCP struct {
 }
 
 // NewSocket returns a new TCP socket.
-func NewSocket() network.Socket {
+func NewSocket() socket.Socket {
 	return &TCP{}
 }
 
-func NewTLSSocket(config *tls.Config) network.Socket {
+func NewTLSSocket(config *tls.Config) socket.Socket {
 	return &TCP{Config: config}
 }
 
@@ -26,7 +26,7 @@ func (t *TCP) Scheme() string {
 	return "tcps"
 }
 
-func (t *TCP) Dial(address string) (network.Conn, error) {
+func (t *TCP) Dial(address string) (socket.Conn, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", address)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (t *TCP) Dial(address string) (network.Conn, error) {
 	return tlsConn, err
 }
 
-func (t *TCP) Listen(address string) (network.Listener, error) {
+func (t *TCP) Listen(address string) (socket.Listener, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", address)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ type TCPListener struct {
 	config *tls.Config
 }
 
-func (l *TCPListener) Accept() (network.Conn, error) {
+func (l *TCPListener) Accept() (socket.Conn, error) {
 	if conn, err := l.l.AcceptTCP(); err != nil {
 		return nil, err
 	} else {
