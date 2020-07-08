@@ -1,4 +1,4 @@
-package transport
+package network
 
 import (
 	"io"
@@ -6,6 +6,10 @@ import (
 
 type Conn interface {
 	io.ReadWriteCloser
+}
+
+type Dialer interface {
+	Dial(address string) (Conn, error)
 }
 
 type Listener interface {
@@ -16,10 +20,11 @@ type Listener interface {
 	// Any blocked Accept operations will be unblocked and return errors.
 	Close() error
 }
-type Transport interface {
+
+type Socket interface {
 	Scheme() string
-	Dial(address string) (Conn, error)
+	Dialer
 	Listen(address string) (Listener, error)
 }
 
-type NewTransport func() Transport
+type NewSocket func() Socket

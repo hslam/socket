@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"errors"
-	"github.com/hslam/transport"
+	"github.com/hslam/network"
 	"io"
 	"net"
 	"net/http"
@@ -24,20 +24,23 @@ type HTTP struct {
 	Config *tls.Config
 }
 
-// NewTransport returns a new HTTP transport.
-func NewTransport() transport.Transport {
+// NewSocket returns a new HTTP socket.
+func NewSocket() network.Socket {
 	return &HTTP{}
 }
 
-func NewTLSTransport(config *tls.Config) transport.Transport {
+func NewTLSSocket(config *tls.Config) network.Socket {
 	return &HTTP{Config: config}
 }
 
 func (t *HTTP) Scheme() string {
-	return "http"
+	if t.Config == nil {
+		return "http"
+	}
+	return "https"
 }
 
-func (t *HTTP) Dial(address string) (transport.Conn, error) {
+func (t *HTTP) Dial(address string) (network.Conn, error) {
 	var err error
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
@@ -69,7 +72,7 @@ func (t *HTTP) Dial(address string) (transport.Conn, error) {
 	return tlsConn, err
 }
 
-func (t *HTTP) Listen(address string) (transport.Listener, error) {
+func (t *HTTP) Listen(address string) (network.Listener, error) {
 	httpServer := &http.Server{
 		Addr: address,
 	}
@@ -86,7 +89,7 @@ type HTTPListener struct {
 	config     *tls.Config
 }
 
-func (l *HTTPListener) Accept() (transport.Conn, error) {
+func (l *HTTPListener) Accept() (network.Conn, error) {
 	if conn, ok := <-l.handler.conn; ok {
 		if l.config == nil {
 			return conn, nil
