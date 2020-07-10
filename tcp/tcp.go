@@ -15,8 +15,8 @@ type TCPConn struct {
 	io.ReadWriteCloser
 }
 
-func (c *TCPConn) Message() socket.Message {
-	return socket.NewMessage(c, 0, 0)
+func (c *TCPConn) Messages() socket.Messages {
+	return socket.NewMessages(c, 0, 0)
 }
 
 // NewSocket returns a new TCP socket.

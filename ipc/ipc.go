@@ -16,8 +16,8 @@ type IPCConn struct {
 	io.ReadWriteCloser
 }
 
-func (c *IPCConn) Message() socket.Message {
-	return socket.NewMessage(c, 0, 0)
+func (c *IPCConn) Messages() socket.Messages {
+	return socket.NewMessages(c, 0, 0)
 }
 
 // NewSocket returns a new IPC socket.

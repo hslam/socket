@@ -6,7 +6,7 @@ import (
 
 var BufferSize = 65536
 
-type Message interface {
+type Messages interface {
 	SetReader(io.Reader)
 	GetReader() io.Reader
 	SetWriter(io.Writer)
@@ -20,7 +20,7 @@ type Message interface {
 	Close() error
 }
 
-type message struct {
+type messages struct {
 	Reader io.Reader
 	Writer io.Writer
 	Closer io.Closer
@@ -29,14 +29,14 @@ type message struct {
 	buffer []byte
 }
 
-func NewMessage(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int) Message {
+func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int) Messages {
 	if writeBufferSize < 1 {
 		writeBufferSize = BufferSize
 	}
 	if readBufferSize < 1 {
 		readBufferSize = BufferSize
 	}
-	return &message{
+	return &messages{
 		Reader: rwc,
 		Writer: rwc,
 		Closer: rwc,
@@ -45,39 +45,39 @@ func NewMessage(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int)
 	}
 }
 
-func (m *message) SetReader(r io.Reader) {
+func (m *messages) SetReader(r io.Reader) {
 	m.Reader = r
 }
 
-func (m *message) GetReader() io.Reader {
+func (m *messages) GetReader() io.Reader {
 	return m.Reader
 }
 
-func (m *message) SetWriter(w io.Writer) {
+func (m *messages) SetWriter(w io.Writer) {
 	m.Writer = w
 }
 
-func (m *message) GetWriter() io.Writer {
+func (m *messages) GetWriter() io.Writer {
 	return m.Writer
 }
 
-func (m *message) SetCloser(c io.Closer) {
+func (m *messages) SetCloser(c io.Closer) {
 	m.Closer = c
 }
 
-func (m *message) GetCloser() io.Closer {
+func (m *messages) GetCloser() io.Closer {
 	return m.Closer
 }
 
-func (m *message) SetReadBufferSize(s int) {
+func (m *messages) SetReadBufferSize(s int) {
 	m.Read = make([]byte, s)
 }
 
-func (m *message) SetWriteBufferSize(s int) {
+func (m *messages) SetWriteBufferSize(s int) {
 	m.Write = make([]byte, s)
 }
 
-func (m *message) ReadMessage() (p []byte, err error) {
+func (m *messages) ReadMessage() (p []byte, err error) {
 	for {
 		length := uint64(len(m.buffer))
 		var i uint64 = 0
@@ -119,7 +119,7 @@ func (m *message) ReadMessage() (p []byte, err error) {
 	return
 }
 
-func (m *message) WriteMessage(b []byte) error {
+func (m *messages) WriteMessage(b []byte) error {
 	var length = uint64(len(b))
 	var size = 8 + length
 	if uint64(cap(m.Write)) >= size {
@@ -142,6 +142,6 @@ func (m *message) WriteMessage(b []byte) error {
 	return err
 }
 
-func (m *message) Close() error {
+func (m *messages) Close() error {
 	return m.Closer.Close()
 }

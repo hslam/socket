@@ -28,8 +28,8 @@ type HTTPConn struct {
 	io.ReadWriteCloser
 }
 
-func (c *HTTPConn) Message() socket.Message {
-	return socket.NewMessage(c, 0, 0)
+func (c *HTTPConn) Messages() socket.Messages {
+	return socket.NewMessages(c, 0, 0)
 }
 
 // NewSocket returns a new HTTP socket.

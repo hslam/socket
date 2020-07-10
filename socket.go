@@ -6,7 +6,7 @@ import (
 
 type Conn interface {
 	io.ReadWriteCloser
-	Message() Message
+	Messages() Messages
 }
 
 type Dialer interface {
