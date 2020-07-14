@@ -1,23 +1,21 @@
 package socket
 
 import (
+	"github.com/hslam/autowriter"
 	"io"
 )
 
 var BufferSize = 65536
 
 type Messages interface {
-	SetReader(io.Reader)
-	GetReader() io.Reader
-	SetWriter(io.Writer)
-	GetWriter() io.Writer
-	SetCloser(io.Closer)
-	GetCloser() io.Closer
-	SetReadBufferSize(int)
-	SetWriteBufferSize(int)
+	SetBatch(batch Batch)
 	ReadMessage() ([]byte, error)
 	WriteMessage([]byte) error
 	Close() error
+}
+
+type Batch interface {
+	Concurrency() int
 }
 
 type messages struct {
@@ -45,36 +43,8 @@ func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int
 	}
 }
 
-func (m *messages) SetReader(r io.Reader) {
-	m.Reader = r
-}
-
-func (m *messages) GetReader() io.Reader {
-	return m.Reader
-}
-
-func (m *messages) SetWriter(w io.Writer) {
-	m.Writer = w
-}
-
-func (m *messages) GetWriter() io.Writer {
-	return m.Writer
-}
-
-func (m *messages) SetCloser(c io.Closer) {
-	m.Closer = c
-}
-
-func (m *messages) GetCloser() io.Closer {
-	return m.Closer
-}
-
-func (m *messages) SetReadBufferSize(s int) {
-	m.Read = make([]byte, s)
-}
-
-func (m *messages) SetWriteBufferSize(s int) {
-	m.Write = make([]byte, s)
+func (m *messages) SetBatch(batch Batch) {
+	m.Writer = autowriter.NewAutoWriter(m.Writer, false, 65536, 4, batch)
 }
 
 func (m *messages) ReadMessage() (p []byte, err error) {
