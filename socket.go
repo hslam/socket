@@ -1,7 +1,10 @@
 package socket
 
 import (
+	"errors"
+	"fmt"
 	"io"
+	"strings"
 )
 
 type Conn interface {
@@ -29,3 +32,13 @@ type Socket interface {
 }
 
 type NewSocket func() Socket
+
+func Address(s Socket, url string) (string, error) {
+	if !strings.HasPrefix(url, s.Scheme()+"://") {
+		return url, errors.New("error url:" + url)
+	}
+	return url[len(s.Scheme()+"://"):], nil
+}
+func Url(s Socket, addr string) string {
+	return fmt.Sprintf("%s://%s", s.Scheme(), addr)
+}
