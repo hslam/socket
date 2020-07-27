@@ -24,7 +24,7 @@ type WSConn struct {
 }
 
 func (c *WSConn) Messages() socket.Messages {
-	return socket.NewMessages(c, 0, 0)
+	return &Messages{WSConn: c}
 }
 
 // NewSocket returns a new WS socket.
