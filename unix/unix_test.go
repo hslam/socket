@@ -1,4 +1,4 @@
-package ipc
+package unix
 
 import (
 	"github.com/hslam/socket"
@@ -7,13 +7,13 @@ import (
 )
 
 var (
-	addr     = "/tmp/ipc"
+	addr     = "/tmp/unix"
 	started  = make(chan bool, 1)
 	once     = sync.Once{}
 	messages socket.Messages
 )
 
-func TestIPC(t *testing.T) {
+func TestUNIX(t *testing.T) {
 	go server(addr, started, t)
 	<-started
 	client(addr, t)
@@ -64,7 +64,7 @@ func server(addr string, started chan bool, t *testing.T) {
 	}
 }
 
-func BenchmarkIPC(b *testing.B) {
+func BenchmarkUNIX(b *testing.B) {
 	once.Do(func() {
 		go func() {
 			s := NewSocket()

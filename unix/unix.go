@@ -1,4 +1,4 @@
-package ipc
+package unix
 
 import (
 	"crypto/tls"
@@ -8,35 +8,35 @@ import (
 	"os"
 )
 
-type IPC struct {
+type UNIX struct {
 	Config *tls.Config
 }
 
-type IPCConn struct {
+type UNIXConn struct {
 	io.ReadWriteCloser
 }
 
-func (c *IPCConn) Messages() socket.Messages {
+func (c *UNIXConn) Messages() socket.Messages {
 	return socket.NewMessages(c, 0, 0)
 }
 
 // NewSocket returns a new IPC socket.
 func NewSocket() socket.Socket {
-	return &IPC{}
+	return &UNIX{}
 }
 
 func NewTLSSocket(config *tls.Config) socket.Socket {
-	return &IPC{Config: config}
+	return &UNIX{Config: config}
 }
 
-func (t *IPC) Scheme() string {
+func (t *UNIX) Scheme() string {
 	if t.Config == nil {
-		return "ipc"
+		return "unix"
 	}
-	return "ipcs"
+	return "unixs"
 }
 
-func (t *IPC) Dial(address string) (socket.Conn, error) {
+func (t *UNIX) Dial(address string) (socket.Conn, error) {
 	var addr *net.UnixAddr
 	var err error
 	if addr, err = net.ResolveUnixAddr("unix", address); err != nil {
@@ -47,7 +47,7 @@ func (t *IPC) Dial(address string) (socket.Conn, error) {
 		return nil, err
 	}
 	if t.Config == nil {
-		return &IPCConn{conn}, err
+		return &UNIXConn{conn}, err
 	}
 	t.Config.ServerName = address
 	tlsConn := tls.Client(conn, t.Config)
@@ -55,10 +55,10 @@ func (t *IPC) Dial(address string) (socket.Conn, error) {
 		tlsConn.Close()
 		return nil, err
 	}
-	return &IPCConn{tlsConn}, err
+	return &UNIXConn{tlsConn}, err
 }
 
-func (t *IPC) Listen(address string) (socket.Listener, error) {
+func (t *UNIX) Listen(address string) (socket.Listener, error) {
 	os.Remove(address)
 	var addr *net.UnixAddr
 	var err error
@@ -70,30 +70,30 @@ func (t *IPC) Listen(address string) (socket.Listener, error) {
 		return nil, err
 	}
 
-	return &IPCListener{l: lis, config: t.Config}, err
+	return &UNIXListener{l: lis, config: t.Config}, err
 }
 
-type IPCListener struct {
+type UNIXListener struct {
 	l      *net.UnixListener
 	config *tls.Config
 }
 
-func (l *IPCListener) Accept() (socket.Conn, error) {
+func (l *UNIXListener) Accept() (socket.Conn, error) {
 	if conn, err := l.l.Accept(); err != nil {
 		return nil, err
 	} else {
 		if l.config == nil {
-			return &IPCConn{conn}, err
+			return &UNIXConn{conn}, err
 		}
 		tlsConn := tls.Server(conn, l.config)
 		if err = tlsConn.Handshake(); err != nil {
 			tlsConn.Close()
 			return nil, err
 		}
-		return &IPCConn{tlsConn}, err
+		return &UNIXConn{tlsConn}, err
 	}
 }
 
-func (l *IPCListener) Close() error {
+func (l *UNIXListener) Close() error {
 	return l.l.Close()
 }
