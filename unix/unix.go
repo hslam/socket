@@ -59,7 +59,7 @@ func (t *UNIX) Dial(address string) (socket.Conn, error) {
 }
 
 func (t *UNIX) Listen(address string) (socket.Listener, error) {
-	os.Remove(address)
+	os.RemoveAll(address)
 	var addr *net.UnixAddr
 	var err error
 	if addr, err = net.ResolveUnixAddr("unix", address); err != nil {
