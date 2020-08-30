@@ -116,5 +116,8 @@ func (m *messages) WriteMessage(b []byte) error {
 }
 
 func (m *messages) Close() error {
+	if w, ok := m.Writer.(*autowriter.AutoWriter); ok {
+		w.Close()
+	}
 	return m.Closer.Close()
 }
