@@ -100,6 +100,6 @@ func (l *UNIXListener) Close() error {
 	return l.l.Close()
 }
 
-func (l *UNIXListener) Addr() socket.Addr {
+func (l *UNIXListener) Addr() net.Addr {
 	return l.l.Addr()
 }

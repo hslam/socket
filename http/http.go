@@ -98,7 +98,7 @@ type HTTPListener struct {
 	httpServer *http.Server
 	handler    *handler
 	config     *tls.Config
-	addr       socket.Addr
+	addr       net.Addr
 }
 
 type Address struct {
@@ -133,7 +133,7 @@ func (l *HTTPListener) Close() error {
 	return l.httpServer.Close()
 }
 
-func (l *HTTPListener) Addr() socket.Addr {
+func (l *HTTPListener) Addr() net.Addr {
 	return l.addr
 }
 

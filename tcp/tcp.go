@@ -97,6 +97,6 @@ func (l *TCPListener) Close() error {
 	return l.l.Close()
 }
 
-func (l *TCPListener) Addr() socket.Addr {
+func (l *TCPListener) Addr() net.Addr {
 	return l.l.Addr()
 }

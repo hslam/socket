@@ -10,11 +10,6 @@ import (
 	"strings"
 )
 
-type Addr interface {
-	Network() string
-	String() string
-}
-
 type Conn interface {
 	net.Conn
 	Messages() Messages
@@ -38,7 +33,7 @@ type Dialer interface {
 type Listener interface {
 	Accept() (Conn, error)
 	Close() error
-	Addr() Addr
+	Addr() net.Addr
 }
 
 type Socket interface {

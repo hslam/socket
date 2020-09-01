@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/hslam/socket"
 	"github.com/hslam/websocket"
+	"net"
 	"net/http"
 	"runtime"
 )
@@ -66,7 +67,7 @@ func (t *WS) Serve(ws *websocket.Conn) {
 type WSListener struct {
 	httpServer *http.Server
 	conn       chan *WSConn
-	addr       socket.Addr
+	addr       net.Addr
 }
 
 type Address struct {
@@ -93,6 +94,6 @@ func (l *WSListener) Close() error {
 	return l.httpServer.Close()
 }
 
-func (l *WSListener) Addr() socket.Addr {
+func (l *WSListener) Addr() net.Addr {
 	return l.addr
 }
