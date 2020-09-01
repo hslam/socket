@@ -10,17 +10,6 @@ import (
 
 var BufferSize = 65536
 
-type Messages interface {
-	SetBatch(batch Batch)
-	ReadMessage() ([]byte, error)
-	WriteMessage([]byte) error
-	Close() error
-}
-
-type Batch interface {
-	Concurrency() int
-}
-
 type messages struct {
 	Reader io.Reader
 	Writer io.Writer

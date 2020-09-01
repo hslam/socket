@@ -20,6 +20,17 @@ type Conn interface {
 	Messages() Messages
 }
 
+type Messages interface {
+	SetBatch(batch Batch)
+	ReadMessage() ([]byte, error)
+	WriteMessage([]byte) error
+	Close() error
+}
+
+type Batch interface {
+	Concurrency() int
+}
+
 type Dialer interface {
 	Dial(address string) (Conn, error)
 }
