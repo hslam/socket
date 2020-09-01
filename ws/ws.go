@@ -55,7 +55,7 @@ func (t *WS) Listen(address string) (socket.Listener, error) {
 	}
 	go httpServer.ListenAndServe()
 	t.conn = make(chan *WSConn, numCPU*512)
-	return &WSListener{httpServer: httpServer, conn: t.conn}, nil
+	return &WSListener{httpServer: httpServer, conn: t.conn, addr: &Address{t.Scheme(), address}}, nil
 }
 
 func (t *WS) Serve(ws *websocket.Conn) {
@@ -66,6 +66,20 @@ func (t *WS) Serve(ws *websocket.Conn) {
 type WSListener struct {
 	httpServer *http.Server
 	conn       chan *WSConn
+	addr       socket.Addr
+}
+
+type Address struct {
+	network string
+	address string
+}
+
+func (a *Address) Network() string {
+	return a.network
+}
+
+func (a *Address) String() string {
+	return a.address
 }
 
 func (l *WSListener) Accept() (socket.Conn, error) {
@@ -77,4 +91,8 @@ func (l *WSListener) Accept() (socket.Conn, error) {
 
 func (l *WSListener) Close() error {
 	return l.httpServer.Close()
+}
+
+func (l *WSListener) Addr() socket.Addr {
+	return l.addr
 }

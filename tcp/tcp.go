@@ -6,7 +6,6 @@ package tcp
 import (
 	"crypto/tls"
 	"github.com/hslam/socket"
-	"io"
 	"net"
 )
 
@@ -15,7 +14,7 @@ type TCP struct {
 }
 
 type TCPConn struct {
-	io.ReadWriteCloser
+	net.Conn
 }
 
 func (c *TCPConn) Messages() socket.Messages {
@@ -96,4 +95,8 @@ func (l *TCPListener) Accept() (socket.Conn, error) {
 
 func (l *TCPListener) Close() error {
 	return l.l.Close()
+}
+
+func (l *TCPListener) Addr() socket.Addr {
+	return l.l.Addr()
 }

@@ -28,7 +28,7 @@ type HTTP struct {
 }
 
 type HTTPConn struct {
-	io.ReadWriteCloser
+	net.Conn
 }
 
 func (c *HTTPConn) Messages() socket.Messages {
@@ -91,13 +91,27 @@ func (t *HTTP) Listen(address string) (socket.Listener, error) {
 	h.conn = make(chan net.Conn, numCPU*512)
 	httpServer.Handler = h
 	go httpServer.ListenAndServe()
-	return &HTTPListener{httpServer: httpServer, handler: h, config: t.Config}, nil
+	return &HTTPListener{httpServer: httpServer, handler: h, config: t.Config, addr: &Address{t.Scheme(), address}}, nil
 }
 
 type HTTPListener struct {
 	httpServer *http.Server
 	handler    *handler
 	config     *tls.Config
+	addr       socket.Addr
+}
+
+type Address struct {
+	network string
+	address string
+}
+
+func (a *Address) Network() string {
+	return a.network
+}
+
+func (a *Address) String() string {
+	return a.address
 }
 
 func (l *HTTPListener) Accept() (socket.Conn, error) {
@@ -117,6 +131,10 @@ func (l *HTTPListener) Accept() (socket.Conn, error) {
 
 func (l *HTTPListener) Close() error {
 	return l.httpServer.Close()
+}
+
+func (l *HTTPListener) Addr() socket.Addr {
+	return l.addr
 }
 
 type handler struct {

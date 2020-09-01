@@ -6,12 +6,17 @@ package socket
 import (
 	"errors"
 	"fmt"
-	"io"
+	"net"
 	"strings"
 )
 
+type Addr interface {
+	Network() string
+	String() string
+}
+
 type Conn interface {
-	io.ReadWriteCloser
+	net.Conn
 	Messages() Messages
 }
 
@@ -20,12 +25,9 @@ type Dialer interface {
 }
 
 type Listener interface {
-	// Accept waits for and returns the next connection to the listener.
 	Accept() (Conn, error)
-
-	// Close closes the listener.
-	// Any blocked Accept operations will be unblocked and return errors.
 	Close() error
+	Addr() Addr
 }
 
 type Socket interface {

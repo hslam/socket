@@ -6,7 +6,6 @@ package unix
 import (
 	"crypto/tls"
 	"github.com/hslam/socket"
-	"io"
 	"net"
 	"os"
 )
@@ -16,7 +15,7 @@ type UNIX struct {
 }
 
 type UNIXConn struct {
-	io.ReadWriteCloser
+	net.Conn
 }
 
 func (c *UNIXConn) Messages() socket.Messages {
@@ -99,4 +98,8 @@ func (l *UNIXListener) Accept() (socket.Conn, error) {
 
 func (l *UNIXListener) Close() error {
 	return l.l.Close()
+}
+
+func (l *UNIXListener) Addr() socket.Addr {
+	return l.l.Addr()
 }
