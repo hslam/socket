@@ -4,11 +4,18 @@
 package socket
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/hslam/poll"
 	"net"
+	"runtime"
 	"strings"
 )
+
+var numCPU = runtime.NumCPU()
+var ErrEvent = errors.New("event is nil")
+var ErrConn = errors.New("conn is nil")
 
 type Conn interface {
 	net.Conn
@@ -16,14 +23,10 @@ type Conn interface {
 }
 
 type Messages interface {
-	SetBatch(batch Batch)
+	SetBatch(batch func() int)
 	ReadMessage() ([]byte, error)
 	WriteMessage([]byte) error
 	Close() error
-}
-
-type Batch interface {
-	Concurrency() int
 }
 
 type Dialer interface {
@@ -34,6 +37,7 @@ type Listener interface {
 	Accept() (Conn, error)
 	Close() error
 	Addr() net.Addr
+	Serve() error
 }
 
 type Socket interface {
@@ -41,8 +45,6 @@ type Socket interface {
 	Dialer
 	Listen(address string) (Listener, error)
 }
-
-type NewSocket func() Socket
 
 func Address(s Socket, url string) (string, error) {
 	if !strings.HasPrefix(url, s.Scheme()+"://") {
@@ -52,4 +54,19 @@ func Address(s Socket, url string) (string, error) {
 }
 func Url(s Socket, addr string) string {
 	return fmt.Sprintf("%s://%s", s.Scheme(), addr)
+}
+
+func NewSocket(network string, config *tls.Config, event *poll.Event) (Socket, error) {
+	switch network {
+	case "tcp", "tcps":
+		return NewTCPSocket(config, event), nil
+	case "unix", "unixs":
+		return NewUNIXSocket(config, event), nil
+	case "http", "https":
+		return NewHTTPSocket(config, event), nil
+	case "ws", "wss":
+		return NewWSSocket(config, event), nil
+	default:
+		return nil, errors.New("not supported")
+	}
 }
