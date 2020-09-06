@@ -35,8 +35,11 @@ func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int
 	}
 }
 
-func (m *messages) SetBatch(batch Batch) {
-	m.Writer = autowriter.NewAutoWriter(m.Writer, false, 65536, 4, batch)
+func (m *messages) SetBatch(concurrency func() int) {
+	if concurrency == nil {
+		return
+	}
+	m.Writer = autowriter.NewAutoWriter(m.Writer, false, 65536, 4, concurrency)
 }
 
 func (m *messages) ReadMessage() (p []byte, err error) {
@@ -64,17 +67,13 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 			}
 			p = m.buffer[i+8 : i+8+msgLength]
 			i += 8 + msgLength
-			break
-		}
-		m.buffer = m.buffer[i:]
-		if i > 0 {
-			break
+			m.buffer = m.buffer[i:]
+			return
 		}
 		n, err := m.Reader.Read(m.Read)
 		if err != nil {
-			return p, err
-		}
-		if n > 0 {
+			return nil, err
+		} else if n > 0 {
 			m.buffer = append(m.buffer, m.Read[:n]...)
 		}
 	}
