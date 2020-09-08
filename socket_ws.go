@@ -88,6 +88,13 @@ func (l *WSListener) Serve() error {
 	if l.event == nil {
 		return ErrEvent
 	}
+	if l.event.Upgrade == nil {
+		if l.config == nil {
+			l.event.Upgrade = UpgradeWS()
+		} else {
+			l.event.Upgrade = UpgradeTLSWS(l.config)
+		}
+	}
 	return poll.Serve(l.l, l.event)
 }
 

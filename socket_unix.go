@@ -98,6 +98,13 @@ func (l *UNIXListener) Serve() error {
 	if l.event == nil {
 		return ErrEvent
 	}
+	if l.event.Upgrade == nil {
+		if l.config == nil {
+			l.event.Upgrade = Upgrade()
+		} else {
+			l.event.Upgrade = UpgradeTLS(l.config)
+		}
+	}
 	return poll.Serve(l.l, l.event)
 }
 
