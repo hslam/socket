@@ -6,17 +6,20 @@ package socket
 import (
 	"github.com/hslam/autowriter"
 	"io"
+	"sync"
 )
 
 var BufferSize = 65536
 
 type messages struct {
-	Reader io.Reader
-	Writer io.Writer
-	Closer io.Closer
-	Write  []byte
-	Read   []byte
-	buffer []byte
+	reading sync.Mutex
+	writing sync.Mutex
+	Reader  io.Reader
+	Writer  io.Writer
+	Closer  io.Closer
+	Write   []byte
+	Read    []byte
+	buffer  []byte
 }
 
 func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int) Messages {
@@ -39,10 +42,14 @@ func (m *messages) SetBatch(concurrency func() int) {
 	if concurrency == nil {
 		return
 	}
+	m.writing.Lock()
+	defer m.writing.Unlock()
 	m.Writer = autowriter.NewAutoWriter(m.Writer, false, 65536, 4, concurrency)
 }
 
 func (m *messages) ReadMessage() (p []byte, err error) {
+	m.reading.Lock()
+	defer m.reading.Unlock()
 	for {
 		length := uint64(len(m.buffer))
 		var i uint64 = 0
@@ -81,6 +88,8 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 }
 
 func (m *messages) WriteMessage(b []byte) error {
+	m.writing.Lock()
+	defer m.writing.Unlock()
 	var length = uint64(len(b))
 	var size = 8 + length
 	if uint64(cap(m.Write)) >= size {
