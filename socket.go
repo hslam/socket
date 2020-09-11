@@ -37,7 +37,9 @@ type Listener interface {
 	Accept() (Conn, error)
 	Close() error
 	Addr() net.Addr
-	Serve() error
+	Serve(event *poll.Event) error
+	ServeConn(handle func(req []byte) (res []byte)) error
+	ServeMessages(handle func(req []byte) (res []byte)) error
 }
 
 type Socket interface {
@@ -56,16 +58,16 @@ func Url(s Socket, addr string) string {
 	return fmt.Sprintf("%s://%s", s.Scheme(), addr)
 }
 
-func NewSocket(network string, config *tls.Config, event *poll.Event) (Socket, error) {
+func NewSocket(network string, config *tls.Config) (Socket, error) {
 	switch network {
 	case "tcp", "tcps":
-		return NewTCPSocket(config, event), nil
+		return NewTCPSocket(config), nil
 	case "unix", "unixs":
-		return NewUNIXSocket(config, event), nil
+		return NewUNIXSocket(config), nil
 	case "http", "https":
-		return NewHTTPSocket(config, event), nil
+		return NewHTTPSocket(config), nil
 	case "ws", "wss":
-		return NewWSSocket(config, event), nil
+		return NewWSSocket(config), nil
 	default:
 		return nil, errors.New("not supported")
 	}

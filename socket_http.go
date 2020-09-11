@@ -24,7 +24,6 @@ const (
 
 type HTTP struct {
 	Config *tls.Config
-	Event  *poll.Event
 }
 
 type HTTPConn struct {
@@ -36,8 +35,8 @@ func (c *HTTPConn) Messages() Messages {
 }
 
 // NewHTTPSocket returns a new HTTP socket.
-func NewHTTPSocket(config *tls.Config, event *poll.Event) Socket {
-	return &HTTP{Config: config, Event: event}
+func NewHTTPSocket(config *tls.Config) Socket {
+	return &HTTP{Config: config}
 }
 
 func (t *HTTP) Scheme() string {
@@ -58,7 +57,7 @@ func (t *HTTP) Dial(address string) (Conn, error) {
 		t.Config.ServerName = address
 		tlsConn := tls.Client(conn, t.Config)
 		if err = tlsConn.Handshake(); err != nil {
-			tlsConn.Close()
+			conn.Close()
 			return nil, err
 		}
 		conn = tlsConn
@@ -85,13 +84,12 @@ func (t *HTTP) Listen(address string) (Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &HTTPListener{l: lis, config: t.Config, event: t.Event}, nil
+	return &HTTPListener{l: lis, config: t.Config}, nil
 }
 
 type HTTPListener struct {
 	l      net.Listener
 	config *tls.Config
-	event  *poll.Event
 }
 
 func (l *HTTPListener) Accept() (Conn, error) {
@@ -107,7 +105,7 @@ func (l *HTTPListener) Accept() (Conn, error) {
 		}
 		tlsConn := tls.Server(conn, l.config)
 		if err = tlsConn.Handshake(); err != nil {
-			tlsConn.Close()
+			conn.Close()
 			return nil, err
 		}
 		c := upgradeHTTPConn(tlsConn)
@@ -118,18 +116,66 @@ func (l *HTTPListener) Accept() (Conn, error) {
 	}
 }
 
-func (l *HTTPListener) Serve() error {
-	if l.event == nil {
+func (l *HTTPListener) Serve(event *poll.Event) error {
+	if event == nil {
 		return ErrEvent
 	}
-	if l.event.Upgrade == nil {
-		if l.config == nil {
-			l.event.Upgrade = UpgradeHTTP()
-		} else {
-			l.event.Upgrade = UpgradeTLSHTTP(l.config)
-		}
+	return poll.Serve(l.l, event)
+}
+
+func (l *HTTPListener) ServeConn(handle func(req []byte) (res []byte)) error {
+	event := &poll.Event{
+		UpgradeConn: func(conn net.Conn) (upgrade net.Conn, err error) {
+			if l.config != nil {
+				tlsConn := tls.Server(conn, l.config)
+				if err := tlsConn.Handshake(); err != nil {
+					conn.Close()
+					return nil, err
+				}
+				conn = tlsConn
+			}
+			c := upgradeHTTPConn(conn)
+			if c == nil {
+				return nil, ErrConn
+			}
+			upgrade = c
+			return
+		},
+		Handle: handle,
 	}
-	return poll.Serve(l.l, l.event)
+	return poll.Serve(l.l, event)
+}
+
+func (l *HTTPListener) ServeMessages(handle func(req []byte) (res []byte)) error {
+	event := &poll.Event{
+		UpgradeHandle: func(conn net.Conn) (func() error, error) {
+			if l.config != nil {
+				tlsConn := tls.Server(conn, l.config)
+				if err := tlsConn.Handshake(); err != nil {
+					conn.Close()
+					return nil, err
+				}
+				conn = tlsConn
+			}
+			c := upgradeHTTPConn(conn)
+			if c == nil {
+				return nil, ErrConn
+			}
+			messages := NewMessages(c, 0, 0)
+			return func() error {
+				req, err := messages.ReadMessage()
+				if err != nil {
+					return err
+				}
+				res := handle(req)
+				if len(res) > 0 {
+					err = messages.WriteMessage(res)
+				}
+				return err
+			}, nil
+		},
+	}
+	return poll.Serve(l.l, event)
 }
 
 func (l *HTTPListener) Close() error {

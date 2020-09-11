@@ -17,7 +17,6 @@ const (
 
 type WS struct {
 	Config *tls.Config
-	Event  *poll.Event
 }
 
 type WSConn struct {
@@ -29,8 +28,8 @@ func (c *WSConn) Messages() Messages {
 }
 
 // NewWSSocket returns a new WS socket.
-func NewWSSocket(config *tls.Config, event *poll.Event) Socket {
-	return &WS{Config: config, Event: event}
+func NewWSSocket(config *tls.Config) Socket {
+	return &WS{Config: config}
 }
 
 func (t *WS) Scheme() string {
@@ -51,13 +50,12 @@ func (t *WS) Listen(address string) (Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &WSListener{l: lis, config: t.Config, event: t.Event}, nil
+	return &WSListener{l: lis, config: t.Config}, nil
 }
 
 type WSListener struct {
 	l      net.Listener
 	config *tls.Config
-	event  *poll.Event
 }
 
 func (l *WSListener) Accept() (Conn, error) {
@@ -73,7 +71,7 @@ func (l *WSListener) Accept() (Conn, error) {
 		}
 		tlsConn := tls.Server(conn, l.config)
 		if err = tlsConn.Handshake(); err != nil {
-			tlsConn.Close()
+			conn.Close()
 			return nil, err
 		}
 		ws := websocket.UpgradeConn(tlsConn)
@@ -84,18 +82,46 @@ func (l *WSListener) Accept() (Conn, error) {
 	}
 }
 
-func (l *WSListener) Serve() error {
-	if l.event == nil {
+func (l *WSListener) Serve(event *poll.Event) error {
+	if event == nil {
 		return ErrEvent
 	}
-	if l.event.Upgrade == nil {
-		if l.config == nil {
-			l.event.Upgrade = UpgradeWS()
-		} else {
-			l.event.Upgrade = UpgradeTLSWS(l.config)
-		}
+	return poll.Serve(l.l, event)
+}
+
+func (l *WSListener) ServeConn(handle func(req []byte) (res []byte)) error {
+	return l.ServeMessages(handle)
+}
+
+func (l *WSListener) ServeMessages(handle func(req []byte) (res []byte)) error {
+	event := &poll.Event{
+		UpgradeHandle: func(conn net.Conn) (func() error, error) {
+			if l.config != nil {
+				tlsConn := tls.Server(conn, l.config)
+				if err := tlsConn.Handshake(); err != nil {
+					conn.Close()
+					return nil, err
+				}
+				conn = tlsConn
+			}
+			ws := websocket.UpgradeConn(conn)
+			if ws == nil {
+				return nil, ErrConn
+			}
+			return func() error {
+				req, err := ws.ReadMessage()
+				if err != nil {
+					return err
+				}
+				res := handle(req)
+				if len(res) > 0 {
+					err = ws.WriteMessage(res)
+				}
+				return err
+			}, nil
+		},
 	}
-	return poll.Serve(l.l, l.event)
+	return poll.Serve(l.l, event)
 }
 
 func (l *WSListener) Close() error {

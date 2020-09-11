@@ -11,7 +11,6 @@ import (
 
 type TCP struct {
 	Config *tls.Config
-	Event  *poll.Event
 }
 
 type TCPConn struct {
@@ -23,8 +22,8 @@ func (c *TCPConn) Messages() Messages {
 }
 
 // NewTCPSocket returns a new TCP socket.
-func NewTCPSocket(config *tls.Config, event *poll.Event) Socket {
-	return &TCP{Config: config, Event: event}
+func NewTCPSocket(config *tls.Config) Socket {
+	return &TCP{Config: config}
 }
 
 func (t *TCP) Scheme() string {
@@ -50,7 +49,7 @@ func (t *TCP) Dial(address string) (Conn, error) {
 	t.Config.ServerName = address
 	tlsConn := tls.Client(conn, t.Config)
 	if err = tlsConn.Handshake(); err != nil {
-		tlsConn.Close()
+		conn.Close()
 		return nil, err
 	}
 	return &TCPConn{tlsConn}, err
@@ -65,13 +64,12 @@ func (t *TCP) Listen(address string) (Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &TCPListener{l: lis, config: t.Config, event: t.Event}, err
+	return &TCPListener{l: lis, config: t.Config}, err
 }
 
 type TCPListener struct {
 	l      *net.TCPListener
 	config *tls.Config
-	event  *poll.Event
 }
 
 func (l *TCPListener) Accept() (Conn, error) {
@@ -84,25 +82,65 @@ func (l *TCPListener) Accept() (Conn, error) {
 		}
 		tlsConn := tls.Server(conn, l.config)
 		if err = tlsConn.Handshake(); err != nil {
-			tlsConn.Close()
+			conn.Close()
 			return nil, err
 		}
 		return &TCPConn{tlsConn}, err
 	}
 }
 
-func (l *TCPListener) Serve() error {
-	if l.event == nil {
+func (l *TCPListener) Serve(event *poll.Event) error {
+	if event == nil {
 		return ErrEvent
 	}
-	if l.event.Upgrade == nil {
-		if l.config == nil {
-			l.event.Upgrade = Upgrade()
-		} else {
-			l.event.Upgrade = UpgradeTLS(l.config)
-		}
+	return poll.Serve(l.l, event)
+}
+
+func (l *TCPListener) ServeConn(handle func(req []byte) (res []byte)) error {
+	event := &poll.Event{
+		UpgradeConn: func(conn net.Conn) (upgrade net.Conn, err error) {
+			if l.config != nil {
+				tlsConn := tls.Server(conn, l.config)
+				if err := tlsConn.Handshake(); err != nil {
+					conn.Close()
+					return nil, err
+				}
+				upgrade = tlsConn
+			}
+			upgrade = conn
+			return
+		},
+		Handle: handle,
 	}
-	return poll.Serve(l.l, l.event)
+	return poll.Serve(l.l, event)
+}
+
+func (l *TCPListener) ServeMessages(handle func(req []byte) (res []byte)) error {
+	event := &poll.Event{
+		UpgradeHandle: func(conn net.Conn) (func() error, error) {
+			if l.config != nil {
+				tlsConn := tls.Server(conn, l.config)
+				if err := tlsConn.Handshake(); err != nil {
+					conn.Close()
+					return nil, err
+				}
+				conn = tlsConn
+			}
+			messages := NewMessages(conn, 0, 0)
+			return func() error {
+				req, err := messages.ReadMessage()
+				if err != nil {
+					return err
+				}
+				res := handle(req)
+				if len(res) > 0 {
+					err = messages.WriteMessage(res)
+				}
+				return err
+			}, nil
+		},
+	}
+	return poll.Serve(l.l, event)
 }
 
 func (l *TCPListener) Close() error {
