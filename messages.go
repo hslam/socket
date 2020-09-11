@@ -7,6 +7,7 @@ import (
 	"github.com/hslam/autowriter"
 	"io"
 	"sync"
+	"sync/atomic"
 )
 
 var BufferSize = 65536
@@ -20,6 +21,7 @@ type messages struct {
 	Write   []byte
 	Read    []byte
 	buffer  []byte
+	closed  int32
 }
 
 func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int) Messages {
@@ -113,6 +115,9 @@ func (m *messages) WriteMessage(b []byte) error {
 }
 
 func (m *messages) Close() error {
+	if !atomic.CompareAndSwapInt32(&m.closed, 0, 1) {
+		return nil
+	}
 	if w, ok := m.Writer.(*autowriter.AutoWriter); ok {
 		w.Close()
 	}
