@@ -99,7 +99,7 @@ func (l *UNIXListener) Serve(event *poll.Event) error {
 	return poll.Serve(l.l, event)
 }
 
-func (l *UNIXListener) ServeConn(handle func(req []byte) (res []byte)) error {
+func (l *UNIXListener) ServeData(opened func(net.Conn) error, handle func(req []byte) (res []byte)) error {
 	event := &poll.Event{
 		UpgradeConn: func(conn net.Conn) (upgrade net.Conn, err error) {
 			if l.config != nil {
@@ -111,6 +111,12 @@ func (l *UNIXListener) ServeConn(handle func(req []byte) (res []byte)) error {
 				upgrade = tlsConn
 			}
 			upgrade = conn
+			if opened != nil {
+				if err = opened(upgrade); err != nil {
+					upgrade.Close()
+					return
+				}
+			}
 			return
 		},
 		Handle: handle,
@@ -118,7 +124,38 @@ func (l *UNIXListener) ServeConn(handle func(req []byte) (res []byte)) error {
 	return poll.Serve(l.l, event)
 }
 
-func (l *UNIXListener) ServeMessages(handle func(req []byte) (res []byte)) error {
+func (l *UNIXListener) ServeConn(opened func(net.Conn) (Context, error), handle func(Context) error) error {
+	event := &poll.Event{
+		UpgradeHandle: func(conn net.Conn) (func() error, error) {
+			if l.config != nil {
+				tlsConn := tls.Server(conn, l.config)
+				if err := tlsConn.Handshake(); err != nil {
+					conn.Close()
+					return nil, err
+				}
+				conn = tlsConn
+			}
+			var context Context
+			var err error
+			if opened != nil {
+				context, err = opened(conn)
+				if err != nil {
+					return nil, err
+				}
+			}
+			return func() error {
+				err := handle(context)
+				if err == poll.EOF {
+					conn.Close()
+				}
+				return err
+			}, nil
+		},
+	}
+	return poll.Serve(l.l, event)
+}
+
+func (l *UNIXListener) ServeMessages(opened func(Messages) (Context, error), handle func(Context) error) error {
 	event := &poll.Event{
 		UpgradeHandle: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
@@ -130,14 +167,18 @@ func (l *UNIXListener) ServeMessages(handle func(req []byte) (res []byte)) error
 				conn = tlsConn
 			}
 			messages := NewMessages(conn, 0, 0)
-			return func() error {
-				req, err := messages.ReadMessage()
+			var context Context
+			var err error
+			if opened != nil {
+				context, err = opened(messages)
 				if err != nil {
-					return err
+					return nil, err
 				}
-				res := handle(req)
-				if len(res) > 0 {
-					err = messages.WriteMessage(res)
+			}
+			return func() error {
+				err := handle(context)
+				if err == poll.EOF {
+					messages.Close()
 				}
 				return err
 			}, nil

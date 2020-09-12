@@ -38,9 +38,12 @@ type Listener interface {
 	Close() error
 	Addr() net.Addr
 	Serve(event *poll.Event) error
-	ServeConn(handle func(req []byte) (res []byte)) error
-	ServeMessages(handle func(req []byte) (res []byte)) error
+	ServeData(opened func(net.Conn) error, handle func(req []byte) (res []byte)) error
+	ServeConn(opened func(net.Conn) (Context, error), handle func(Context) error) error
+	ServeMessages(opened func(Messages) (Context, error), handle func(Context) error) error
 }
+
+type Context interface{}
 
 type Socket interface {
 	Scheme() string
