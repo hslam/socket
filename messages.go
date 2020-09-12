@@ -10,33 +10,66 @@ import (
 	"sync/atomic"
 )
 
-var BufferSize = 65536
+const bufferSize = 65536
+
+var (
+	buffers = sync.Map{}
+	assign  int32
+)
+
+func assignPool(size int) *sync.Pool {
+	for {
+		if p, ok := buffers.Load(size); ok {
+			return p.(*sync.Pool)
+		}
+		if atomic.CompareAndSwapInt32(&assign, 0, 1) {
+			var pool = &sync.Pool{New: func() interface{} {
+				return make([]byte, size)
+			}}
+			buffers.Store(size, pool)
+			return pool
+		}
+	}
+}
 
 type messages struct {
-	reading sync.Mutex
-	writing sync.Mutex
-	Reader  io.Reader
-	Writer  io.Writer
-	Closer  io.Closer
-	Write   []byte
-	Read    []byte
-	buffer  []byte
-	closed  int32
+	lowMemory       bool
+	reading         sync.Mutex
+	writing         sync.Mutex
+	reader          io.Reader
+	writer          io.Writer
+	closer          io.Closer
+	readBufferSize  int
+	readBuffer      []byte
+	writeBufferSize int
+	writeBuffer     []byte
+	buffer          []byte
+	closed          int32
 }
 
 func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int) Messages {
 	if writeBufferSize < 1 {
-		writeBufferSize = BufferSize
+		writeBufferSize = bufferSize
 	}
 	if readBufferSize < 1 {
-		readBufferSize = BufferSize
+		readBufferSize = bufferSize
+	}
+	var lowMemory = false
+	var readBuffer []byte
+	var writeBuffer []byte
+	if !lowMemory {
+		readBuffer = make([]byte, readBufferSize)
+		writeBuffer = make([]byte, writeBufferSize)
 	}
 	return &messages{
-		Reader: rwc,
-		Writer: rwc,
-		Closer: rwc,
-		Write:  make([]byte, writeBufferSize),
-		Read:   make([]byte, readBufferSize),
+		lowMemory:       lowMemory,
+		reader:          rwc,
+		writer:          rwc,
+		closer:          rwc,
+		writeBufferSize: writeBufferSize,
+		readBufferSize:  readBufferSize,
+		readBuffer:      readBuffer,
+		writeBuffer:     writeBuffer,
 	}
 }
 
@@ -46,10 +79,14 @@ func (m *messages) SetBatch(concurrency func() int) {
 	}
 	m.writing.Lock()
 	defer m.writing.Unlock()
-	m.Writer = autowriter.NewAutoWriter(m.Writer, false, 65536, 4, concurrency)
+	m.writer = autowriter.NewAutoWriter(m.writer, false, 65536, 4, concurrency)
 }
 
 func (m *messages) ReadMessage() (p []byte, err error) {
+	var pool *sync.Pool
+	if m.lowMemory {
+		pool = assignPool(m.readBufferSize)
+	}
 	m.reading.Lock()
 	defer m.reading.Unlock()
 	for {
@@ -79,28 +116,52 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 			m.buffer = m.buffer[i:]
 			return
 		}
-		n, err := m.Reader.Read(m.Read)
+		var readBuffer []byte
+		if m.lowMemory {
+			readBuffer = pool.Get().([]byte)
+			readBuffer = readBuffer[:cap(readBuffer)]
+		} else {
+			readBuffer = m.readBuffer
+		}
+		n, err := m.reader.Read(readBuffer)
 		if err != nil {
+			if m.lowMemory {
+				pool.Put(readBuffer)
+			}
 			return nil, err
 		} else if n > 0 {
-			m.buffer = append(m.buffer, m.Read[:n]...)
+			m.buffer = append(m.buffer, readBuffer[:n]...)
+			if m.lowMemory {
+				pool.Put(readBuffer)
+			}
 		}
 	}
 	return
 }
 
 func (m *messages) WriteMessage(b []byte) error {
+	var pool *sync.Pool
+	if m.lowMemory {
+		pool = assignPool(m.writeBufferSize)
+	}
 	m.writing.Lock()
 	defer m.writing.Unlock()
 	var length = uint64(len(b))
 	var size = 8 + length
-	if uint64(cap(m.Write)) >= size {
-		m.Write = m.Write[:size]
+	var writeBuffer []byte
+	if m.lowMemory {
+		writeBuffer = pool.Get().([]byte)
+		writeBuffer = writeBuffer[:cap(writeBuffer)]
 	} else {
-		m.Write = make([]byte, size)
+		writeBuffer = m.writeBuffer
+	}
+	if uint64(cap(writeBuffer)) >= size {
+		writeBuffer = writeBuffer[:size]
+	} else {
+		writeBuffer = make([]byte, size)
 	}
 	var t = length
-	var buf = m.Write[0:8]
+	var buf = writeBuffer[0:8]
 	buf[0] = uint8(t)
 	buf[1] = uint8(t >> 8)
 	buf[2] = uint8(t >> 16)
@@ -109,8 +170,13 @@ func (m *messages) WriteMessage(b []byte) error {
 	buf[5] = uint8(t >> 40)
 	buf[6] = uint8(t >> 48)
 	buf[7] = uint8(t >> 56)
-	copy(m.Write[8:], b)
-	_, err := m.Writer.Write(m.Write[:size])
+	copy(writeBuffer[8:], b)
+	_, err := m.writer.Write(writeBuffer[:size])
+	if m.lowMemory {
+		pool.Put(writeBuffer)
+	} else {
+		m.writeBuffer = writeBuffer
+	}
 	return err
 }
 
@@ -118,8 +184,8 @@ func (m *messages) Close() error {
 	if !atomic.CompareAndSwapInt32(&m.closed, 0, 1) {
 		return nil
 	}
-	if w, ok := m.Writer.(*autowriter.AutoWriter); ok {
+	if w, ok := m.writer.(*autowriter.AutoWriter); ok {
 		w.Close()
 	}
-	return m.Closer.Close()
+	return m.closer.Close()
 }
