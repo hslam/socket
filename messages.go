@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 )
 
-const bufferSize = 65536
+const bufferSize = 65528
 
 var (
 	buffers = sync.Map{}
@@ -27,6 +27,7 @@ func assignPool(size int) *sync.Pool {
 				return make([]byte, size)
 			}}
 			buffers.Store(size, pool)
+			atomic.StoreInt32(&assign, 0)
 			return pool
 		}
 	}
@@ -54,6 +55,8 @@ func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int
 	if readBufferSize < 1 {
 		readBufferSize = bufferSize
 	}
+	writeBufferSize += 8
+	readBufferSize += 8
 	var lowMemory = false
 	var readBuffer []byte
 	var writeBuffer []byte
