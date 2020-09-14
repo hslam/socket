@@ -7,7 +7,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/hslam/poll"
+	"github.com/hslam/netpoll"
 	"net"
 	"runtime"
 	"strings"
@@ -37,7 +37,7 @@ type Listener interface {
 	Accept() (Conn, error)
 	Close() error
 	Addr() net.Addr
-	Serve(event *poll.Event) error
+	Serve(event *netpoll.Event) error
 	ServeData(opened func(net.Conn) error, handle func(req []byte) (res []byte)) error
 	ServeConn(opened func(net.Conn) (Context, error), handle func(Context) error) error
 	ServeMessages(opened func(Messages) (Context, error), handle func(Context) error) error

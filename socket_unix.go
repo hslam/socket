@@ -5,7 +5,7 @@ package socket
 
 import (
 	"crypto/tls"
-	"github.com/hslam/poll"
+	"github.com/hslam/netpoll"
 	"net"
 	"os"
 )
@@ -92,15 +92,15 @@ func (l *UNIXListener) Accept() (Conn, error) {
 	}
 }
 
-func (l *UNIXListener) Serve(event *poll.Event) error {
+func (l *UNIXListener) Serve(event *netpoll.Event) error {
 	if event == nil {
 		return ErrEvent
 	}
-	return poll.Serve(l.l, event)
+	return netpoll.Serve(l.l, event)
 }
 
 func (l *UNIXListener) ServeData(opened func(net.Conn) error, handle func(req []byte) (res []byte)) error {
-	event := &poll.Event{
+	event := &netpoll.Event{
 		UpgradeConn: func(conn net.Conn) (upgrade net.Conn, err error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
@@ -121,11 +121,11 @@ func (l *UNIXListener) ServeData(opened func(net.Conn) error, handle func(req []
 		},
 		Handle: handle,
 	}
-	return poll.Serve(l.l, event)
+	return netpoll.Serve(l.l, event)
 }
 
 func (l *UNIXListener) ServeConn(opened func(net.Conn) (Context, error), handle func(Context) error) error {
-	event := &poll.Event{
+	event := &netpoll.Event{
 		UpgradeHandle: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
@@ -145,18 +145,18 @@ func (l *UNIXListener) ServeConn(opened func(net.Conn) (Context, error), handle 
 			}
 			return func() error {
 				err := handle(context)
-				if err == poll.EOF {
+				if err == netpoll.EOF {
 					conn.Close()
 				}
 				return err
 			}, nil
 		},
 	}
-	return poll.Serve(l.l, event)
+	return netpoll.Serve(l.l, event)
 }
 
 func (l *UNIXListener) ServeMessages(opened func(Messages) (Context, error), handle func(Context) error) error {
-	event := &poll.Event{
+	event := &netpoll.Event{
 		UpgradeHandle: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
@@ -177,14 +177,14 @@ func (l *UNIXListener) ServeMessages(opened func(Messages) (Context, error), han
 			}
 			return func() error {
 				err := handle(context)
-				if err == poll.EOF {
+				if err == netpoll.EOF {
 					messages.Close()
 				}
 				return err
 			}, nil
 		},
 	}
-	return poll.Serve(l.l, event)
+	return netpoll.Serve(l.l, event)
 }
 
 func (l *UNIXListener) Close() error {

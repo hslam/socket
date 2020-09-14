@@ -5,7 +5,7 @@ package socket
 
 import (
 	"crypto/tls"
-	"github.com/hslam/poll"
+	"github.com/hslam/netpoll"
 	"github.com/hslam/websocket"
 	"net"
 )
@@ -82,15 +82,15 @@ func (l *WSListener) Accept() (Conn, error) {
 	}
 }
 
-func (l *WSListener) Serve(event *poll.Event) error {
+func (l *WSListener) Serve(event *netpoll.Event) error {
 	if event == nil {
 		return ErrEvent
 	}
-	return poll.Serve(l.l, event)
+	return netpoll.Serve(l.l, event)
 }
 
 func (l *WSListener) ServeData(opened func(net.Conn) error, handle func(req []byte) (res []byte)) error {
-	event := &poll.Event{
+	event := &netpoll.Event{
 		UpgradeHandle: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
@@ -123,11 +123,11 @@ func (l *WSListener) ServeData(opened func(net.Conn) error, handle func(req []by
 			}, nil
 		},
 	}
-	return poll.Serve(l.l, event)
+	return netpoll.Serve(l.l, event)
 }
 
 func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), handle func(Context) error) error {
-	event := &poll.Event{
+	event := &netpoll.Event{
 		UpgradeHandle: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
@@ -151,18 +151,18 @@ func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), handle fu
 			}
 			return func() error {
 				err := handle(context)
-				if err == poll.EOF {
+				if err == netpoll.EOF {
 					ws.Close()
 				}
 				return err
 			}, nil
 		},
 	}
-	return poll.Serve(l.l, event)
+	return netpoll.Serve(l.l, event)
 }
 
 func (l *WSListener) ServeMessages(opened func(Messages) (Context, error), handle func(Context) error) error {
-	event := &poll.Event{
+	event := &netpoll.Event{
 		UpgradeHandle: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
@@ -186,14 +186,14 @@ func (l *WSListener) ServeMessages(opened func(Messages) (Context, error), handl
 			}
 			return func() error {
 				err := handle(context)
-				if err == poll.EOF {
+				if err == netpoll.EOF {
 					ws.Close()
 				}
 				return err
 			}, nil
 		},
 	}
-	return poll.Serve(l.l, event)
+	return netpoll.Serve(l.l, event)
 }
 
 func (l *WSListener) Close() error {
