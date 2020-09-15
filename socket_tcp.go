@@ -96,7 +96,7 @@ func (l *TCPListener) Serve(event *netpoll.Event) error {
 	return netpoll.Serve(l.l, event)
 }
 
-func (l *TCPListener) ServeData(opened func(net.Conn) error, handle func(req []byte) (res []byte)) error {
+func (l *TCPListener) ServeData(opened func(net.Conn) error, handler func(req []byte) (res []byte)) error {
 	event := &netpoll.Event{
 		UpgradeConn: func(conn net.Conn) (upgrade net.Conn, err error) {
 			if l.config != nil {
@@ -116,14 +116,14 @@ func (l *TCPListener) ServeData(opened func(net.Conn) error, handle func(req []b
 			}
 			return
 		},
-		Handle: handle,
+		Handler: handler,
 	}
 	return netpoll.Serve(l.l, event)
 }
 
-func (l *TCPListener) ServeConn(opened func(net.Conn) (Context, error), handle func(Context) error) error {
+func (l *TCPListener) ServeConn(opened func(net.Conn) (Context, error), handler func(Context) error) error {
 	event := &netpoll.Event{
-		UpgradeHandle: func(conn net.Conn) (func() error, error) {
+		UpgradeHandler: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
 				if err := tlsConn.Handshake(); err != nil {
@@ -141,7 +141,7 @@ func (l *TCPListener) ServeConn(opened func(net.Conn) (Context, error), handle f
 				}
 			}
 			return func() error {
-				err := handle(context)
+				err := handler(context)
 				if err == netpoll.EOF {
 					conn.Close()
 				}
@@ -152,9 +152,9 @@ func (l *TCPListener) ServeConn(opened func(net.Conn) (Context, error), handle f
 	return netpoll.Serve(l.l, event)
 }
 
-func (l *TCPListener) ServeMessages(opened func(Messages) (Context, error), handle func(Context) error) error {
+func (l *TCPListener) ServeMessages(opened func(Messages) (Context, error), handler func(Context) error) error {
 	event := &netpoll.Event{
-		UpgradeHandle: func(conn net.Conn) (func() error, error) {
+		UpgradeHandler: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
 				if err := tlsConn.Handshake(); err != nil {
@@ -173,7 +173,7 @@ func (l *TCPListener) ServeMessages(opened func(Messages) (Context, error), hand
 				}
 			}
 			return func() error {
-				err := handle(context)
+				err := handler(context)
 				if err == netpoll.EOF {
 					messages.Close()
 				}

@@ -123,7 +123,7 @@ func (l *HTTPListener) Serve(event *netpoll.Event) error {
 	return netpoll.Serve(l.l, event)
 }
 
-func (l *HTTPListener) ServeData(opened func(net.Conn) error, handle func(req []byte) (res []byte)) error {
+func (l *HTTPListener) ServeData(opened func(net.Conn) error, handler func(req []byte) (res []byte)) error {
 	event := &netpoll.Event{
 		UpgradeConn: func(conn net.Conn) (upgrade net.Conn, err error) {
 			if l.config != nil {
@@ -147,14 +147,14 @@ func (l *HTTPListener) ServeData(opened func(net.Conn) error, handle func(req []
 			}
 			return
 		},
-		Handle: handle,
+		Handler: handler,
 	}
 	return netpoll.Serve(l.l, event)
 }
 
-func (l *HTTPListener) ServeConn(opened func(net.Conn) (Context, error), handle func(Context) error) error {
+func (l *HTTPListener) ServeConn(opened func(net.Conn) (Context, error), handler func(Context) error) error {
 	event := &netpoll.Event{
-		UpgradeHandle: func(conn net.Conn) (func() error, error) {
+		UpgradeHandler: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
 				if err := tlsConn.Handshake(); err != nil {
@@ -176,7 +176,7 @@ func (l *HTTPListener) ServeConn(opened func(net.Conn) (Context, error), handle 
 				}
 			}
 			return func() error {
-				err := handle(context)
+				err := handler(context)
 				if err == netpoll.EOF {
 					c.Close()
 				}
@@ -187,9 +187,9 @@ func (l *HTTPListener) ServeConn(opened func(net.Conn) (Context, error), handle 
 	return netpoll.Serve(l.l, event)
 }
 
-func (l *HTTPListener) ServeMessages(opened func(Messages) (Context, error), handle func(Context) error) error {
+func (l *HTTPListener) ServeMessages(opened func(Messages) (Context, error), handler func(Context) error) error {
 	event := &netpoll.Event{
-		UpgradeHandle: func(conn net.Conn) (func() error, error) {
+		UpgradeHandler: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
 				if err := tlsConn.Handshake(); err != nil {
@@ -212,7 +212,7 @@ func (l *HTTPListener) ServeMessages(opened func(Messages) (Context, error), han
 				}
 			}
 			return func() error {
-				err := handle(context)
+				err := handler(context)
 				if err == netpoll.EOF {
 					messages.Close()
 				}
@@ -257,7 +257,7 @@ func upgradeHttp(w http.ResponseWriter, r *http.Request) net.Conn {
 }
 
 type response struct {
-	handlerHeader http.Header
+	handlerrHeader http.Header
 	status        int
 	conn          net.Conn
 }
@@ -267,7 +267,7 @@ func (w *response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 }
 
 func (w *response) Header() http.Header {
-	return w.handlerHeader
+	return w.handlerrHeader
 }
 
 func (w *response) Write(data []byte) (n int, err error) {

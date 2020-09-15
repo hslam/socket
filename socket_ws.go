@@ -89,9 +89,9 @@ func (l *WSListener) Serve(event *netpoll.Event) error {
 	return netpoll.Serve(l.l, event)
 }
 
-func (l *WSListener) ServeData(opened func(net.Conn) error, handle func(req []byte) (res []byte)) error {
+func (l *WSListener) ServeData(opened func(net.Conn) error, handler func(req []byte) (res []byte)) error {
 	event := &netpoll.Event{
-		UpgradeHandle: func(conn net.Conn) (func() error, error) {
+		UpgradeHandler: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
 				if err := tlsConn.Handshake(); err != nil {
@@ -115,7 +115,7 @@ func (l *WSListener) ServeData(opened func(net.Conn) error, handle func(req []by
 				if err != nil {
 					return err
 				}
-				res := handle(req)
+				res := handler(req)
 				if len(res) > 0 {
 					err = ws.WriteMessage(res)
 				}
@@ -126,9 +126,9 @@ func (l *WSListener) ServeData(opened func(net.Conn) error, handle func(req []by
 	return netpoll.Serve(l.l, event)
 }
 
-func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), handle func(Context) error) error {
+func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), handler func(Context) error) error {
 	event := &netpoll.Event{
-		UpgradeHandle: func(conn net.Conn) (func() error, error) {
+		UpgradeHandler: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
 				if err := tlsConn.Handshake(); err != nil {
@@ -150,7 +150,7 @@ func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), handle fu
 				}
 			}
 			return func() error {
-				err := handle(context)
+				err := handler(context)
 				if err == netpoll.EOF {
 					ws.Close()
 				}
@@ -161,9 +161,9 @@ func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), handle fu
 	return netpoll.Serve(l.l, event)
 }
 
-func (l *WSListener) ServeMessages(opened func(Messages) (Context, error), handle func(Context) error) error {
+func (l *WSListener) ServeMessages(opened func(Messages) (Context, error), handler func(Context) error) error {
 	event := &netpoll.Event{
-		UpgradeHandle: func(conn net.Conn) (func() error, error) {
+		UpgradeHandler: func(conn net.Conn) (func() error, error) {
 			if l.config != nil {
 				tlsConn := tls.Server(conn, l.config)
 				if err := tlsConn.Handshake(); err != nil {
@@ -185,7 +185,7 @@ func (l *WSListener) ServeMessages(opened func(Messages) (Context, error), handl
 				}
 			}
 			return func() error {
-				err := handle(context)
+				err := handler(context)
 				if err == netpoll.EOF {
 					ws.Close()
 				}
