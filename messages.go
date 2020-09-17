@@ -4,7 +4,7 @@
 package socket
 
 import (
-	"github.com/hslam/autowriter"
+	"github.com/hslam/writer"
 	"io"
 	"sync"
 	"sync/atomic"
@@ -76,13 +76,13 @@ func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int
 	}
 }
 
-func (m *messages) SetBatch(concurrency func() int) {
+func (m *messages) SetConcurrency(concurrency func() int) {
 	if concurrency == nil {
 		return
 	}
 	m.writing.Lock()
 	defer m.writing.Unlock()
-	m.writer = autowriter.NewAutoWriter(m.writer, false, 65536, 4, concurrency)
+	m.writer = writer.NewWriter(m.writer, concurrency, 65536, false)
 }
 
 func (m *messages) ReadMessage() (p []byte, err error) {
@@ -187,7 +187,7 @@ func (m *messages) Close() error {
 	if !atomic.CompareAndSwapInt32(&m.closed, 0, 1) {
 		return nil
 	}
-	if w, ok := m.writer.(*autowriter.AutoWriter); ok {
+	if w, ok := m.writer.(*writer.Writer); ok {
 		w.Close()
 	}
 	return m.closer.Close()

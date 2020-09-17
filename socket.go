@@ -23,7 +23,7 @@ type Conn interface {
 }
 
 type Messages interface {
-	SetBatch(batch func() int)
+	SetConcurrency(concurrency func() int)
 	ReadMessage() ([]byte, error)
 	WriteMessage([]byte) error
 	Close() error
