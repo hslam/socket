@@ -63,7 +63,7 @@ func (l *WSListener) Accept() (Conn, error) {
 		return nil, err
 	} else {
 		if l.config == nil {
-			ws := websocket.UpgradeConn(conn)
+			ws := websocket.Upgrade(conn)
 			if ws == nil {
 				return nil, ErrConn
 			}
@@ -74,7 +74,7 @@ func (l *WSListener) Accept() (Conn, error) {
 			conn.Close()
 			return nil, err
 		}
-		ws := websocket.UpgradeConn(tlsConn)
+		ws := websocket.Upgrade(tlsConn)
 		if ws == nil {
 			return nil, ErrConn
 		}
@@ -100,7 +100,7 @@ func (l *WSListener) ServeData(opened func(net.Conn) error, handler func(req []b
 				}
 				conn = tlsConn
 			}
-			ws := websocket.UpgradeConn(conn)
+			ws := websocket.Upgrade(conn)
 			if ws == nil {
 				return nil, ErrConn
 			}
@@ -137,7 +137,7 @@ func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), handler f
 				}
 				conn = tlsConn
 			}
-			ws := websocket.UpgradeConn(conn)
+			ws := websocket.Upgrade(conn)
 			if ws == nil {
 				return nil, ErrConn
 			}
@@ -172,7 +172,7 @@ func (l *WSListener) ServeMessages(opened func(Messages) (Context, error), handl
 				}
 				conn = tlsConn
 			}
-			ws := websocket.UpgradeConn(conn)
+			ws := websocket.Upgrade(conn)
 			if ws == nil {
 				return nil, ErrConn
 			}
