@@ -68,12 +68,13 @@ func (t *UNIX) Listen(address string) (Listener, error) {
 		return nil, err
 	}
 
-	return &UNIXListener{l: lis, config: t.Config}, err
+	return &UNIXListener{l: lis, config: t.Config, address: address}, err
 }
 
 type UNIXListener struct {
-	l      *net.UnixListener
-	config *tls.Config
+	l       *net.UnixListener
+	config  *tls.Config
+	address string
 }
 
 func (l *UNIXListener) Accept() (Conn, error) {
@@ -188,6 +189,7 @@ func (l *UNIXListener) ServeMessages(opened func(Messages) (Context, error), han
 }
 
 func (l *UNIXListener) Close() error {
+	defer os.RemoveAll(l.address)
 	return l.l.Close()
 }
 
