@@ -258,8 +258,8 @@ func upgradeHttp(w http.ResponseWriter, r *http.Request) net.Conn {
 
 type response struct {
 	handlerrHeader http.Header
-	status        int
-	conn          net.Conn
+	status         int
+	conn           net.Conn
 }
 
 func (w *response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
