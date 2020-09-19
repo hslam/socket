@@ -66,7 +66,7 @@ func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int
 	var writePool *sync.Pool
 	if lowMemory {
 		readPool = assignPool(readBufferSize)
-		writePool = assignPool(readBufferSize)
+		writePool = assignPool(writeBufferSize)
 	} else {
 		readBuffer = make([]byte, readBufferSize)
 		writeBuffer = make([]byte, writeBufferSize)
