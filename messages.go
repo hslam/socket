@@ -45,6 +45,8 @@ type messages struct {
 	writeBufferSize int
 	writeBuffer     []byte
 	buffer          []byte
+	readPool        *sync.Pool
+	writePool       *sync.Pool
 	closed          int32
 }
 
@@ -60,7 +62,12 @@ func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int
 	var lowMemory = false
 	var readBuffer []byte
 	var writeBuffer []byte
-	if !lowMemory {
+	var readPool *sync.Pool
+	var writePool *sync.Pool
+	if lowMemory {
+		readPool = assignPool(readBufferSize)
+		writePool = assignPool(readBufferSize)
+	} else {
 		readBuffer = make([]byte, readBufferSize)
 		writeBuffer = make([]byte, writeBufferSize)
 	}
@@ -73,6 +80,8 @@ func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int
 		readBufferSize:  readBufferSize,
 		readBuffer:      readBuffer,
 		writeBuffer:     writeBuffer,
+		readPool:        readPool,
+		writePool:       writePool,
 	}
 }
 
@@ -86,10 +95,6 @@ func (m *messages) SetConcurrency(concurrency func() int) {
 }
 
 func (m *messages) ReadMessage() (p []byte, err error) {
-	var pool *sync.Pool
-	if m.lowMemory {
-		pool = assignPool(m.readBufferSize)
-	}
 	m.reading.Lock()
 	defer m.reading.Unlock()
 	for {
@@ -121,7 +126,7 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 		}
 		var readBuffer []byte
 		if m.lowMemory {
-			readBuffer = pool.Get().([]byte)
+			readBuffer = m.readPool.Get().([]byte)
 			readBuffer = readBuffer[:cap(readBuffer)]
 		} else {
 			readBuffer = m.readBuffer
@@ -129,13 +134,13 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 		n, err := m.reader.Read(readBuffer)
 		if err != nil {
 			if m.lowMemory {
-				pool.Put(readBuffer)
+				m.readPool.Put(readBuffer)
 			}
 			return nil, err
 		} else if n > 0 {
 			m.buffer = append(m.buffer, readBuffer[:n]...)
 			if m.lowMemory {
-				pool.Put(readBuffer)
+				m.readPool.Put(readBuffer)
 			}
 		}
 	}
@@ -143,17 +148,13 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 }
 
 func (m *messages) WriteMessage(b []byte) error {
-	var pool *sync.Pool
-	if m.lowMemory {
-		pool = assignPool(m.writeBufferSize)
-	}
 	m.writing.Lock()
 	defer m.writing.Unlock()
 	var length = uint64(len(b))
 	var size = 8 + length
 	var writeBuffer []byte
 	if m.lowMemory {
-		writeBuffer = pool.Get().([]byte)
+		writeBuffer = m.writePool.Get().([]byte)
 		writeBuffer = writeBuffer[:cap(writeBuffer)]
 	} else {
 		writeBuffer = m.writeBuffer
@@ -176,7 +177,7 @@ func (m *messages) WriteMessage(b []byte) error {
 	copy(writeBuffer[8:], b)
 	_, err := m.writer.Write(writeBuffer[:size])
 	if m.lowMemory {
-		pool.Put(writeBuffer)
+		m.writePool.Put(writeBuffer)
 	} else {
 		m.writeBuffer = writeBuffer
 	}
