@@ -63,9 +63,9 @@ func (l *WSListener) Accept() (Conn, error) {
 		return nil, err
 	} else {
 		if l.config == nil {
-			ws := websocket.Upgrade(conn)
-			if ws == nil {
-				return nil, ErrConn
+			ws, err := websocket.Upgrade(conn)
+			if err != nil {
+				return nil, err
 			}
 			return &WSConn{ws}, err
 		}
@@ -74,126 +74,113 @@ func (l *WSListener) Accept() (Conn, error) {
 			conn.Close()
 			return nil, err
 		}
-		ws := websocket.Upgrade(tlsConn)
-		if ws == nil {
-			return nil, ErrConn
+		ws, err := websocket.Upgrade(tlsConn)
+		if err != nil {
+			return nil, err
 		}
 		return &WSConn{ws}, err
 	}
 }
 
-func (l *WSListener) Serve(event *netpoll.Event) error {
-	if event == nil {
-		return ErrEvent
+func (l *WSListener) Serve(handler netpoll.Handler) error {
+	if handler == nil {
+		return ErrHandler
 	}
-	return netpoll.Serve(l.l, event)
+	return netpoll.Serve(l.l, handler)
 }
 
-func (l *WSListener) ServeData(opened func(net.Conn) error, handler func(req []byte) (res []byte)) error {
-	event := &netpoll.Event{
-		UpgradeHandler: func(conn net.Conn) (func() error, error) {
-			if l.config != nil {
-				tlsConn := tls.Server(conn, l.config)
-				if err := tlsConn.Handshake(); err != nil {
-					conn.Close()
-					return nil, err
-				}
-				conn = tlsConn
-			}
-			ws := websocket.Upgrade(conn)
-			if ws == nil {
-				return nil, ErrConn
-			}
-			if opened != nil {
-				if err := opened(ws); err != nil {
-					ws.Close()
-					return nil, ErrConn
-				}
-			}
-			return func() error {
-				req, err := ws.ReadMessage()
-				if err != nil {
-					return err
-				}
-				res := handler(req)
-				if len(res) > 0 {
-					err = ws.WriteMessage(res)
-				}
-				return err
-			}, nil
-		},
+func (l *WSListener) ServeData(opened func(net.Conn) error, serve func(req []byte) (res []byte)) error {
+	if opened == nil {
+		return ErrOpened
+	} else if serve == nil {
+		return ErrServe
 	}
-	return netpoll.Serve(l.l, event)
+	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
+		if l.config != nil {
+			tlsConn := tls.Server(conn, l.config)
+			if err := tlsConn.Handshake(); err != nil {
+				conn.Close()
+				return nil, err
+			}
+			conn = tlsConn
+		}
+		messages, err := websocket.Upgrade(conn)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+		opened(messages)
+		return messages, nil
+	}
+	Serve := func(context netpoll.Context) error {
+		ws := context.(*websocket.Conn)
+		msg, err := ws.ReadMessage()
+		if err != nil {
+			return err
+		}
+		res := serve(msg)
+		if len(res) == 0 {
+			return nil
+		}
+		return ws.WriteMessage(res)
+	}
+	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
 }
 
-func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), handler func(Context) error) error {
-	event := &netpoll.Event{
-		UpgradeHandler: func(conn net.Conn) (func() error, error) {
-			if l.config != nil {
-				tlsConn := tls.Server(conn, l.config)
-				if err := tlsConn.Handshake(); err != nil {
-					conn.Close()
-					return nil, err
-				}
-				conn = tlsConn
-			}
-			ws := websocket.Upgrade(conn)
-			if ws == nil {
-				return nil, ErrConn
-			}
-			var context Context
-			var err error
-			if opened != nil {
-				context, err = opened(ws)
-				if err != nil {
-					return nil, err
-				}
-			}
-			return func() error {
-				err := handler(context)
-				if err == netpoll.EOF {
-					ws.Close()
-				}
-				return err
-			}, nil
-		},
+func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), serve func(Context) error) error {
+	if opened == nil {
+		return ErrOpened
+	} else if serve == nil {
+		return ErrServe
 	}
-	return netpoll.Serve(l.l, event)
+	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
+		if l.config != nil {
+			tlsConn := tls.Server(conn, l.config)
+			if err := tlsConn.Handshake(); err != nil {
+				conn.Close()
+				return nil, err
+			}
+			conn = tlsConn
+		}
+		messages, err := websocket.Upgrade(conn)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+		return opened(messages)
+	}
+	Serve := func(context netpoll.Context) error {
+		return serve(context)
+	}
+	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
 }
 
-func (l *WSListener) ServeMessages(opened func(Messages) (Context, error), handler func(Context) error) error {
-	event := &netpoll.Event{
-		UpgradeHandler: func(conn net.Conn) (func() error, error) {
-			if l.config != nil {
-				tlsConn := tls.Server(conn, l.config)
-				if err := tlsConn.Handshake(); err != nil {
-					conn.Close()
-					return nil, err
-				}
-				conn = tlsConn
-			}
-			ws := websocket.Upgrade(conn)
-			if ws == nil {
-				return nil, ErrConn
-			}
-			var context Context
-			var err error
-			if opened != nil {
-				context, err = opened(ws)
-				if err != nil {
-					return nil, err
-				}
-			}
-			return func() error {
-				err := handler(context)
-				if err == netpoll.EOF {
-					ws.Close()
-				}
-				return err
-			}, nil
-		},
+func (l *WSListener) ServeMessages(opened func(Messages) (Context, error), serve func(Context) error) error {
+	if opened == nil {
+		return ErrOpened
+	} else if serve == nil {
+		return ErrServe
 	}
-	return netpoll.Serve(l.l, event)
+	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
+		if l.config != nil {
+			tlsConn := tls.Server(conn, l.config)
+			if err := tlsConn.Handshake(); err != nil {
+				conn.Close()
+				return nil, err
+			}
+			conn = tlsConn
+		}
+		messages, err := websocket.Upgrade(conn)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+		return opened(messages)
+	}
+	Serve := func(context netpoll.Context) error {
+		return serve(context)
+	}
+	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
 }
 
 func (l *WSListener) Close() error {

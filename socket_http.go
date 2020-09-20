@@ -116,111 +116,122 @@ func (l *HTTPListener) Accept() (Conn, error) {
 	}
 }
 
-func (l *HTTPListener) Serve(event *netpoll.Event) error {
-	if event == nil {
-		return ErrEvent
+func (l *HTTPListener) Serve(handler netpoll.Handler) error {
+	if handler == nil {
+		return ErrHandler
 	}
-	return netpoll.Serve(l.l, event)
+	return netpoll.Serve(l.l, handler)
 }
 
-func (l *HTTPListener) ServeData(opened func(net.Conn) error, handler func(req []byte) (res []byte)) error {
-	event := &netpoll.Event{
-		UpgradeConn: func(conn net.Conn) (upgrade net.Conn, err error) {
-			if l.config != nil {
-				tlsConn := tls.Server(conn, l.config)
-				if err := tlsConn.Handshake(); err != nil {
-					conn.Close()
-					return nil, err
-				}
-				conn = tlsConn
-			}
-			c := upgradeHTTPConn(conn)
-			if c == nil {
-				return nil, ErrConn
-			}
-			upgrade = c
-			if opened != nil {
-				if err = opened(upgrade); err != nil {
-					upgrade.Close()
-					return
-				}
-			}
-			return
-		},
-		Handler: handler,
+func (l *HTTPListener) ServeData(opened func(net.Conn) error, serve func(req []byte) (res []byte)) error {
+	if serve == nil {
+		return ErrServe
 	}
-	return netpoll.Serve(l.l, event)
+	type Context struct {
+		Conn net.Conn
+		buf  []byte
+	}
+	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
+		if l.config != nil {
+			tlsConn := tls.Server(conn, l.config)
+			if err := tlsConn.Handshake(); err != nil {
+				conn.Close()
+				return nil, err
+			}
+			conn = tlsConn
+		}
+		httpConn := upgradeHTTPConn(conn)
+		if httpConn == nil {
+			conn.Close()
+			return nil, ErrConn
+		}
+		conn = httpConn
+		if opened != nil {
+			if err := opened(conn); err != nil {
+				conn.Close()
+				return nil, err
+			}
+		}
+		ctx := &Context{
+			Conn: conn,
+			buf:  make([]byte, 1024*64),
+		}
+		return ctx, nil
+	}
+	Serve := func(context netpoll.Context) error {
+		c := context.(*Context)
+		n, err := c.Conn.Read(c.buf)
+		if err != nil {
+			return err
+		}
+		res := serve(c.buf[:n])
+		if len(res) == 0 {
+			return nil
+		}
+		_, err = c.Conn.Write(res)
+		return err
+	}
+	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+
 }
 
-func (l *HTTPListener) ServeConn(opened func(net.Conn) (Context, error), handler func(Context) error) error {
-	event := &netpoll.Event{
-		UpgradeHandler: func(conn net.Conn) (func() error, error) {
-			if l.config != nil {
-				tlsConn := tls.Server(conn, l.config)
-				if err := tlsConn.Handshake(); err != nil {
-					conn.Close()
-					return nil, err
-				}
-				conn = tlsConn
-			}
-			c := upgradeHTTPConn(conn)
-			if c == nil {
-				return nil, ErrConn
-			}
-			var context Context
-			var err error
-			if opened != nil {
-				context, err = opened(c)
-				if err != nil {
-					return nil, err
-				}
-			}
-			return func() error {
-				err := handler(context)
-				if err == netpoll.EOF {
-					c.Close()
-				}
-				return err
-			}, nil
-		},
+func (l *HTTPListener) ServeConn(opened func(net.Conn) (Context, error), serve func(Context) error) error {
+	if opened == nil {
+		return ErrOpened
+	} else if serve == nil {
+		return ErrServe
 	}
-	return netpoll.Serve(l.l, event)
+	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
+		if l.config != nil {
+			tlsConn := tls.Server(conn, l.config)
+			if err := tlsConn.Handshake(); err != nil {
+				conn.Close()
+				return nil, err
+			}
+			conn = tlsConn
+		}
+		httpConn := upgradeHTTPConn(conn)
+		if httpConn == nil {
+			conn.Close()
+			return nil, ErrConn
+		}
+		conn = httpConn
+		return opened(conn)
+	}
+	Serve := func(context netpoll.Context) error {
+		return serve(context)
+	}
+	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
 }
 
-func (l *HTTPListener) ServeMessages(opened func(Messages) (Context, error), handler func(Context) error) error {
-	event := &netpoll.Event{
-		UpgradeHandler: func(conn net.Conn) (func() error, error) {
-			if l.config != nil {
-				tlsConn := tls.Server(conn, l.config)
-				if err := tlsConn.Handshake(); err != nil {
-					conn.Close()
-					return nil, err
-				}
-				conn = tlsConn
-			}
-			c := upgradeHTTPConn(conn)
-			if c == nil {
-				return nil, ErrConn
-			}
-			messages := NewMessages(c, 0, 0)
-			var context Context
-			var err error
-			if opened != nil {
-				context, err = opened(messages)
-				if err != nil {
-					return nil, err
-				}
-			}
-			return func() error {
-				err := handler(context)
-				if err == netpoll.EOF {
-					messages.Close()
-				}
-				return err
-			}, nil
-		},
+func (l *HTTPListener) ServeMessages(opened func(Messages) (Context, error), serve func(Context) error) error {
+	if opened == nil {
+		return ErrOpened
+	} else if serve == nil {
+		return ErrServe
 	}
-	return netpoll.Serve(l.l, event)
+	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
+		if l.config != nil {
+			tlsConn := tls.Server(conn, l.config)
+			if err := tlsConn.Handshake(); err != nil {
+				conn.Close()
+				return nil, err
+			}
+			conn = tlsConn
+		}
+		httpConn := upgradeHTTPConn(conn)
+		if httpConn == nil {
+			conn.Close()
+			return nil, ErrConn
+		}
+		conn = httpConn
+		messages := NewMessages(conn, 0, 0)
+		return opened(messages)
+	}
+	Serve := func(context netpoll.Context) error {
+		return serve(context)
+	}
+	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
 }
 
 func (l *HTTPListener) Close() error {

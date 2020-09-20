@@ -14,7 +14,9 @@ import (
 )
 
 var numCPU = runtime.NumCPU()
-var ErrEvent = errors.New("event is nil")
+var ErrHandler = errors.New("handler is nil")
+var ErrOpened = errors.New("opened is nil")
+var ErrServe = errors.New("serve is nil")
 var ErrConn = errors.New("conn is nil")
 
 type Conn interface {
@@ -37,10 +39,10 @@ type Listener interface {
 	Accept() (Conn, error)
 	Close() error
 	Addr() net.Addr
-	Serve(event *netpoll.Event) error
-	ServeData(opened func(net.Conn) error, handler func(req []byte) (res []byte)) error
-	ServeConn(opened func(net.Conn) (Context, error), handler func(Context) error) error
-	ServeMessages(opened func(Messages) (Context, error), handler func(Context) error) error
+	Serve(handler netpoll.Handler) error
+	ServeData(opened func(net.Conn) error, serve func(req []byte) (res []byte)) error
+	ServeConn(opened func(net.Conn) (Context, error), serve func(Context) error) error
+	ServeMessages(opened func(Messages) (Context, error), serve func(Context) error) error
 }
 
 type Context interface{}
