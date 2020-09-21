@@ -34,7 +34,7 @@ func assignPool(size int) *sync.Pool {
 }
 
 type messages struct {
-	lowMemory       bool
+	shared          bool
 	reading         sync.Mutex
 	writing         sync.Mutex
 	reader          io.Reader
@@ -59,12 +59,12 @@ func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int
 	}
 	writeBufferSize += 8
 	readBufferSize += 8
-	var lowMemory = false
+	var shared = false
 	var readBuffer []byte
 	var writeBuffer []byte
 	var readPool *sync.Pool
 	var writePool *sync.Pool
-	if lowMemory {
+	if shared {
 		readPool = assignPool(readBufferSize)
 		writePool = assignPool(writeBufferSize)
 	} else {
@@ -72,7 +72,7 @@ func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int
 		writeBuffer = make([]byte, writeBufferSize)
 	}
 	return &messages{
-		lowMemory:       lowMemory,
+		shared:          shared,
 		reader:          rwc,
 		writer:          rwc,
 		closer:          rwc,
@@ -125,7 +125,7 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 			return
 		}
 		var readBuffer []byte
-		if m.lowMemory {
+		if m.shared {
 			readBuffer = m.readPool.Get().([]byte)
 			readBuffer = readBuffer[:cap(readBuffer)]
 		} else {
@@ -133,13 +133,13 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 		}
 		n, err := m.reader.Read(readBuffer)
 		if err != nil {
-			if m.lowMemory {
+			if m.shared {
 				m.readPool.Put(readBuffer)
 			}
 			return nil, err
 		} else if n > 0 {
 			m.buffer = append(m.buffer, readBuffer[:n]...)
-			if m.lowMemory {
+			if m.shared {
 				m.readPool.Put(readBuffer)
 			}
 		}
@@ -153,7 +153,7 @@ func (m *messages) WriteMessage(b []byte) error {
 	var length = uint64(len(b))
 	var size = 8 + length
 	var writeBuffer []byte
-	if m.lowMemory {
+	if m.shared {
 		writeBuffer = m.writePool.Get().([]byte)
 		writeBuffer = writeBuffer[:cap(writeBuffer)]
 	} else {
@@ -176,7 +176,7 @@ func (m *messages) WriteMessage(b []byte) error {
 	buf[7] = uint8(t >> 56)
 	copy(writeBuffer[8:], b)
 	_, err := m.writer.Write(writeBuffer[:size])
-	if m.lowMemory {
+	if m.shared {
 		m.writePool.Put(writeBuffer)
 	} else {
 		m.writeBuffer = writeBuffer
