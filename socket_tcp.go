@@ -18,7 +18,7 @@ type TCPConn struct {
 }
 
 func (c *TCPConn) Messages() Messages {
-	return NewMessages(c, 0, 0)
+	return NewMessages(c, false, 0, 0)
 }
 
 // NewTCPSocket returns a new TCP socket.
@@ -179,7 +179,7 @@ func (l *TCPListener) ServeMessages(opened func(Messages) (Context, error), serv
 			}
 			conn = tlsConn
 		}
-		messages := NewMessages(conn, 0, 0)
+		messages := NewMessages(conn, false, 0, 0)
 		return opened(messages)
 	}
 	Serve := func(context netpoll.Context) error {

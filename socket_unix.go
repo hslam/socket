@@ -19,7 +19,7 @@ type UNIXConn struct {
 }
 
 func (c *UNIXConn) Messages() Messages {
-	return NewMessages(c, 0, 0)
+	return NewMessages(c, false, 0, 0)
 }
 
 // NewUNIXSocket returns a new UNIX socket.
@@ -183,7 +183,7 @@ func (l *UNIXListener) ServeMessages(opened func(Messages) (Context, error), ser
 			}
 			conn = tlsConn
 		}
-		messages := NewMessages(conn, 0, 0)
+		messages := NewMessages(conn, false, 0, 0)
 		return opened(messages)
 	}
 	Serve := func(context netpoll.Context) error {

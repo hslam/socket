@@ -31,7 +31,7 @@ type HTTPConn struct {
 }
 
 func (c *HTTPConn) Messages() Messages {
-	return NewMessages(c, 0, 0)
+	return NewMessages(c, false, 0, 0)
 }
 
 // NewHTTPSocket returns a new HTTP socket.
@@ -225,7 +225,7 @@ func (l *HTTPListener) ServeMessages(opened func(Messages) (Context, error), ser
 			return nil, ErrConn
 		}
 		conn = httpConn
-		messages := NewMessages(conn, 0, 0)
+		messages := NewMessages(conn, false, 0, 0)
 		return opened(messages)
 	}
 	Serve := func(context netpoll.Context) error {

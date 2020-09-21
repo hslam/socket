@@ -50,7 +50,7 @@ type messages struct {
 	closed          int32
 }
 
-func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int) Messages {
+func NewMessages(rwc io.ReadWriteCloser, shared bool, writeBufferSize int, readBufferSize int) Messages {
 	if writeBufferSize < 1 {
 		writeBufferSize = bufferSize
 	}
@@ -59,7 +59,6 @@ func NewMessages(rwc io.ReadWriteCloser, writeBufferSize int, readBufferSize int
 	}
 	writeBufferSize += 8
 	readBufferSize += 8
-	var shared = false
 	var readBuffer []byte
 	var writeBuffer []byte
 	var readPool *sync.Pool
