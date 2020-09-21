@@ -63,18 +63,9 @@ func (l *WSListener) Accept() (Conn, error) {
 		return nil, err
 	} else {
 		if l.config == nil {
-			ws, err := websocket.Upgrade(conn)
-			if err != nil {
-				return nil, err
-			}
-			return &WSConn{ws}, err
+
 		}
-		tlsConn := tls.Server(conn, l.config)
-		if err = tlsConn.Handshake(); err != nil {
-			conn.Close()
-			return nil, err
-		}
-		ws, err := websocket.Upgrade(tlsConn)
+		ws, err := websocket.Upgrade(conn, l.config)
 		if err != nil {
 			return nil, err
 		}
@@ -96,15 +87,7 @@ func (l *WSListener) ServeData(opened func(net.Conn) error, serve func(req []byt
 		return ErrServe
 	}
 	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
-		if l.config != nil {
-			tlsConn := tls.Server(conn, l.config)
-			if err := tlsConn.Handshake(); err != nil {
-				conn.Close()
-				return nil, err
-			}
-			conn = tlsConn
-		}
-		messages, err := websocket.Upgrade(conn)
+		messages, err := websocket.Upgrade(conn, l.config)
 		if err != nil {
 			conn.Close()
 			return nil, err
@@ -134,15 +117,7 @@ func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), serve fun
 		return ErrServe
 	}
 	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
-		if l.config != nil {
-			tlsConn := tls.Server(conn, l.config)
-			if err := tlsConn.Handshake(); err != nil {
-				conn.Close()
-				return nil, err
-			}
-			conn = tlsConn
-		}
-		messages, err := websocket.Upgrade(conn)
+		messages, err := websocket.Upgrade(conn, l.config)
 		if err != nil {
 			conn.Close()
 			return nil, err
@@ -162,15 +137,7 @@ func (l *WSListener) ServeMessages(opened func(Messages) (Context, error), serve
 		return ErrServe
 	}
 	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
-		if l.config != nil {
-			tlsConn := tls.Server(conn, l.config)
-			if err := tlsConn.Handshake(); err != nil {
-				conn.Close()
-				return nil, err
-			}
-			conn = tlsConn
-		}
-		messages, err := websocket.Upgrade(conn)
+		messages, err := websocket.Upgrade(conn, l.config)
 		if err != nil {
 			conn.Close()
 			return nil, err
