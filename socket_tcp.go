@@ -69,6 +69,7 @@ func (t *TCP) Listen(address string) (Listener, error) {
 
 type TCPListener struct {
 	l      *net.TCPListener
+	server *netpoll.Server
 	config *tls.Config
 }
 
@@ -93,7 +94,10 @@ func (l *TCPListener) Serve(handler netpoll.Handler) error {
 	if handler == nil {
 		return ErrHandler
 	}
-	return netpoll.Serve(l.l, handler)
+	l.server = &netpoll.Server{
+		Handler: handler,
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *TCPListener) ServeData(opened func(net.Conn) error, serve func(req []byte) (res []byte)) error {
@@ -138,7 +142,10 @@ func (l *TCPListener) ServeData(opened func(net.Conn) error, serve func(req []by
 		_, err = c.Conn.Write(res)
 		return err
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *TCPListener) ServeConn(opened func(net.Conn) (Context, error), serve func(Context) error) error {
@@ -161,7 +168,10 @@ func (l *TCPListener) ServeConn(opened func(net.Conn) (Context, error), serve fu
 	Serve := func(context netpoll.Context) error {
 		return serve(context)
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *TCPListener) ServeMessages(opened func(Messages) (Context, error), serve func(Context) error) error {
@@ -185,10 +195,16 @@ func (l *TCPListener) ServeMessages(opened func(Messages) (Context, error), serv
 	Serve := func(context netpoll.Context) error {
 		return serve(context)
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *TCPListener) Close() error {
+	if l.server != nil {
+		return l.server.Close()
+	}
 	return l.l.Close()
 }
 

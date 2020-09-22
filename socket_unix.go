@@ -73,6 +73,7 @@ func (t *UNIX) Listen(address string) (Listener, error) {
 
 type UNIXListener struct {
 	l       *net.UnixListener
+	server  *netpoll.Server
 	config  *tls.Config
 	address string
 }
@@ -97,7 +98,10 @@ func (l *UNIXListener) Serve(handler netpoll.Handler) error {
 	if handler == nil {
 		return ErrHandler
 	}
-	return netpoll.Serve(l.l, handler)
+	l.server = &netpoll.Server{
+		Handler: handler,
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *UNIXListener) ServeData(opened func(net.Conn) error, serve func(req []byte) (res []byte)) error {
@@ -142,7 +146,10 @@ func (l *UNIXListener) ServeData(opened func(net.Conn) error, serve func(req []b
 		_, err = c.Conn.Write(res)
 		return err
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *UNIXListener) ServeConn(opened func(net.Conn) (Context, error), serve func(Context) error) error {
@@ -165,7 +172,10 @@ func (l *UNIXListener) ServeConn(opened func(net.Conn) (Context, error), serve f
 	Serve := func(context netpoll.Context) error {
 		return serve(context)
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *UNIXListener) ServeMessages(opened func(Messages) (Context, error), serve func(Context) error) error {
@@ -189,11 +199,17 @@ func (l *UNIXListener) ServeMessages(opened func(Messages) (Context, error), ser
 	Serve := func(context netpoll.Context) error {
 		return serve(context)
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *UNIXListener) Close() error {
 	defer os.RemoveAll(l.address)
+	if l.server != nil {
+		return l.server.Close()
+	}
 	return l.l.Close()
 }
 
