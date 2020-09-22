@@ -143,7 +143,6 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 			}
 		}
 	}
-	return
 }
 
 func (m *messages) WriteMessage(b []byte) error {
