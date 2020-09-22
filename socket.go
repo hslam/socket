@@ -18,6 +18,7 @@ var ErrHandler = errors.New("handler is nil")
 var ErrOpened = errors.New("opened is nil")
 var ErrServe = errors.New("serve is nil")
 var ErrConn = errors.New("conn is nil")
+var ErrNetwork = errors.New("network is not supported")
 
 type Conn interface {
 	net.Conn
@@ -74,6 +75,6 @@ func NewSocket(network string, config *tls.Config) (Socket, error) {
 	case "ws", "wss":
 		return NewWSSocket(config), nil
 	default:
-		return nil, errors.New("not supported")
+		return nil, ErrNetwork
 	}
 }
