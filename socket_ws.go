@@ -33,7 +33,10 @@ func NewWSSocket(config *tls.Config) Socket {
 }
 
 func (t *WS) Scheme() string {
-	return "ws"
+	if t.Config == nil {
+		return "ws"
+	}
+	return "wss"
 }
 
 func (t *WS) Dial(address string) (Conn, error) {
@@ -55,6 +58,7 @@ func (t *WS) Listen(address string) (Listener, error) {
 
 type WSListener struct {
 	l      net.Listener
+	server *netpoll.Server
 	config *tls.Config
 }
 
@@ -77,7 +81,10 @@ func (l *WSListener) Serve(handler netpoll.Handler) error {
 	if handler == nil {
 		return ErrHandler
 	}
-	return netpoll.Serve(l.l, handler)
+	l.server = &netpoll.Server{
+		Handler: handler,
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *WSListener) ServeData(opened func(net.Conn) error, serve func(req []byte) (res []byte)) error {
@@ -107,7 +114,10 @@ func (l *WSListener) ServeData(opened func(net.Conn) error, serve func(req []byt
 		}
 		return ws.WriteMessage(res)
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), serve func(Context) error) error {
@@ -127,7 +137,10 @@ func (l *WSListener) ServeConn(opened func(net.Conn) (Context, error), serve fun
 	Serve := func(context netpoll.Context) error {
 		return serve(context)
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *WSListener) ServeMessages(opened func(Messages) (Context, error), serve func(Context) error) error {
@@ -147,10 +160,16 @@ func (l *WSListener) ServeMessages(opened func(Messages) (Context, error), serve
 	Serve := func(context netpoll.Context) error {
 		return serve(context)
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *WSListener) Close() error {
+	if l.server != nil {
+		return l.server.Close()
+	}
 	return l.l.Close()
 }
 
