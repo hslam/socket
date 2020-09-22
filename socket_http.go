@@ -89,6 +89,7 @@ func (t *HTTP) Listen(address string) (Listener, error) {
 
 type HTTPListener struct {
 	l      net.Listener
+	server *netpoll.Server
 	config *tls.Config
 }
 
@@ -120,7 +121,10 @@ func (l *HTTPListener) Serve(handler netpoll.Handler) error {
 	if handler == nil {
 		return ErrHandler
 	}
-	return netpoll.Serve(l.l, handler)
+	l.server = &netpoll.Server{
+		Handler: handler,
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *HTTPListener) ServeData(opened func(net.Conn) error, serve func(req []byte) (res []byte)) error {
@@ -171,8 +175,10 @@ func (l *HTTPListener) ServeData(opened func(net.Conn) error, serve func(req []b
 		_, err = c.Conn.Write(res)
 		return err
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
-
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *HTTPListener) ServeConn(opened func(net.Conn) (Context, error), serve func(Context) error) error {
@@ -201,7 +207,10 @@ func (l *HTTPListener) ServeConn(opened func(net.Conn) (Context, error), serve f
 	Serve := func(context netpoll.Context) error {
 		return serve(context)
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *HTTPListener) ServeMessages(opened func(Messages) (Context, error), serve func(Context) error) error {
@@ -231,10 +240,16 @@ func (l *HTTPListener) ServeMessages(opened func(Messages) (Context, error), ser
 	Serve := func(context netpoll.Context) error {
 		return serve(context)
 	}
-	return netpoll.Serve(l.l, netpoll.NewHandler(Upgrade, Serve))
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 func (l *HTTPListener) Close() error {
+	if l.server != nil {
+		return l.server.Close()
+	}
 	return l.l.Close()
 }
 
@@ -268,9 +283,9 @@ func upgradeHttp(w http.ResponseWriter, r *http.Request) net.Conn {
 }
 
 type response struct {
-	handlerrHeader http.Header
-	status         int
-	conn           net.Conn
+	handlerHeader http.Header
+	status        int
+	conn          net.Conn
 }
 
 func (w *response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
@@ -278,7 +293,7 @@ func (w *response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 }
 
 func (w *response) Header() http.Header {
-	return w.handlerrHeader
+	return w.handlerHeader
 }
 
 func (w *response) Write(data []byte) (n int, err error) {
