@@ -10,20 +10,24 @@ import (
 	"os"
 )
 
+// UNIX implements the Socket interface.
 type UNIX struct {
 	Config *tls.Config
 }
 
+// UNIXConn implements the Conn interface.
 type UNIXConn struct {
 	net.Conn
 }
 
-func (c *UNIXConn) Connection() net.Conn {
-	return c.Conn
-}
-
+// Messages returns a new Messages.
 func (c *UNIXConn) Messages() Messages {
 	return NewMessages(c.Conn, false, 0, 0)
+}
+
+// Connection returns the net.Conn.
+func (c *UNIXConn) Connection() net.Conn {
+	return c.Conn
 }
 
 // NewUNIXSocket returns a new UNIX socket.
@@ -31,6 +35,7 @@ func NewUNIXSocket(config *tls.Config) Socket {
 	return &UNIX{Config: config}
 }
 
+// Scheme returns the socket's scheme.
 func (t *UNIX) Scheme() string {
 	if t.Config == nil {
 		return "unix"
@@ -38,6 +43,7 @@ func (t *UNIX) Scheme() string {
 	return "unixs"
 }
 
+// Dial connects to an address.
 func (t *UNIX) Dial(address string) (Conn, error) {
 	var addr *net.UnixAddr
 	var err error
@@ -60,6 +66,7 @@ func (t *UNIX) Dial(address string) (Conn, error) {
 	return &UNIXConn{tlsConn}, err
 }
 
+// Listen announces on the local address.
 func (t *UNIX) Listen(address string) (Listener, error) {
 	os.RemoveAll(address)
 	var addr *net.UnixAddr
@@ -75,6 +82,7 @@ func (t *UNIX) Listen(address string) (Listener, error) {
 	return &UNIXListener{l: lis, config: t.Config, address: address}, err
 }
 
+// UNIXListener implements the Listener interface.
 type UNIXListener struct {
 	l       *net.UnixListener
 	server  *netpoll.Server
@@ -82,22 +90,24 @@ type UNIXListener struct {
 	address string
 }
 
+// Accept waits for and returns the next connection to the listener.
 func (l *UNIXListener) Accept() (Conn, error) {
-	if conn, err := l.l.Accept(); err != nil {
+	conn, err := l.l.Accept()
+	if err != nil {
 		return nil, err
-	} else {
-		if l.config == nil {
-			return &UNIXConn{conn}, err
-		}
-		tlsConn := tls.Server(conn, l.config)
-		if err = tlsConn.Handshake(); err != nil {
-			conn.Close()
-			return nil, err
-		}
-		return &UNIXConn{tlsConn}, err
 	}
+	if l.config == nil {
+		return &UNIXConn{conn}, err
+	}
+	tlsConn := tls.Server(conn, l.config)
+	if err = tlsConn.Handshake(); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	return &UNIXConn{tlsConn}, err
 }
 
+// Serve serves the netpoll.Handler by the netpoll.
 func (l *UNIXListener) Serve(handler netpoll.Handler) error {
 	if handler == nil {
 		return ErrHandler
@@ -108,6 +118,7 @@ func (l *UNIXListener) Serve(handler netpoll.Handler) error {
 	return l.server.Serve(l.l)
 }
 
+// ServeData serves the opened func and the serve func by the netpoll.
 func (l *UNIXListener) ServeData(opened func(net.Conn) error, serve func(req []byte) (res []byte)) error {
 	if serve == nil {
 		return ErrServe
@@ -156,6 +167,7 @@ func (l *UNIXListener) ServeData(opened func(net.Conn) error, serve func(req []b
 	return l.server.Serve(l.l)
 }
 
+// ServeConn serves the opened func and the serve func by the netpoll.
 func (l *UNIXListener) ServeConn(opened func(net.Conn) (Context, error), serve func(Context) error) error {
 	if opened == nil {
 		return ErrOpened
@@ -182,6 +194,7 @@ func (l *UNIXListener) ServeConn(opened func(net.Conn) (Context, error), serve f
 	return l.server.Serve(l.l)
 }
 
+// ServeMessages serves the opened func and the serve func by the netpoll.
 func (l *UNIXListener) ServeMessages(opened func(Messages) (Context, error), serve func(Context) error) error {
 	if opened == nil {
 		return ErrOpened
@@ -209,6 +222,7 @@ func (l *UNIXListener) ServeMessages(opened func(Messages) (Context, error), ser
 	return l.server.Serve(l.l)
 }
 
+// Close closes the listener.
 func (l *UNIXListener) Close() error {
 	defer os.RemoveAll(l.address)
 	if l.server != nil {
@@ -217,6 +231,7 @@ func (l *UNIXListener) Close() error {
 	return l.l.Close()
 }
 
+// Addr returns the listener's network address.
 func (l *UNIXListener) Addr() net.Addr {
 	return l.l.Addr()
 }

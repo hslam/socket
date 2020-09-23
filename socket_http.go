@@ -16,26 +16,30 @@ import (
 )
 
 const (
-	//HTTPConnected defines the http connected.
+	// HTTPConnected defines the http connected.
 	HTTPConnected = "200 Connected to Server"
-	//HTTPPath defines the http path.
+	// HTTPPath defines the http path.
 	HTTPPath = "/"
 )
 
+// HTTP implements the Socket interface.
 type HTTP struct {
 	Config *tls.Config
 }
 
+// HTTPConn implements the Conn interface.
 type HTTPConn struct {
 	net.Conn
 }
 
-func (c *HTTPConn) Connection() net.Conn {
-	return c.Conn
-}
-
+// Messages returns a new Messages.
 func (c *HTTPConn) Messages() Messages {
 	return NewMessages(c.Conn, false, 0, 0)
+}
+
+// Connection returns the net.Conn.
+func (c *HTTPConn) Connection() net.Conn {
+	return c.Conn
 }
 
 // NewHTTPSocket returns a new HTTP socket.
@@ -43,6 +47,7 @@ func NewHTTPSocket(config *tls.Config) Socket {
 	return &HTTP{Config: config}
 }
 
+// Scheme returns the socket's scheme.
 func (t *HTTP) Scheme() string {
 	if t.Config == nil {
 		return "http"
@@ -50,6 +55,7 @@ func (t *HTTP) Scheme() string {
 	return "https"
 }
 
+// Dial connects to an address.
 func (t *HTTP) Dial(address string) (Conn, error) {
 	var err error
 	var conn net.Conn
@@ -83,6 +89,7 @@ func (t *HTTP) Dial(address string) (Conn, error) {
 	return &HTTPConn{conn}, nil
 }
 
+// Listen announces on the local address.
 func (t *HTTP) Listen(address string) (Listener, error) {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
@@ -91,36 +98,39 @@ func (t *HTTP) Listen(address string) (Listener, error) {
 	return &HTTPListener{l: lis, config: t.Config}, nil
 }
 
+// HTTPListener implements the Listener interface.
 type HTTPListener struct {
 	l      net.Listener
 	server *netpoll.Server
 	config *tls.Config
 }
 
+// Accept waits for and returns the next connection to the listener.
 func (l *HTTPListener) Accept() (Conn, error) {
-	if conn, err := l.l.Accept(); err != nil {
+	conn, err := l.l.Accept()
+	if err != nil {
 		return nil, err
-	} else {
-		if l.config == nil {
-			c := upgradeHTTPConn(conn)
-			if c == nil {
-				return nil, ErrConn
-			}
-			return &HTTPConn{c}, err
-		}
-		tlsConn := tls.Server(conn, l.config)
-		if err = tlsConn.Handshake(); err != nil {
-			conn.Close()
-			return nil, err
-		}
-		c := upgradeHTTPConn(tlsConn)
+	}
+	if l.config == nil {
+		c := upgradeHTTPConn(conn)
 		if c == nil {
 			return nil, ErrConn
 		}
 		return &HTTPConn{c}, err
 	}
+	tlsConn := tls.Server(conn, l.config)
+	if err = tlsConn.Handshake(); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	c := upgradeHTTPConn(tlsConn)
+	if c == nil {
+		return nil, ErrConn
+	}
+	return &HTTPConn{c}, err
 }
 
+// Serve serves the netpoll.Handler by the netpoll.
 func (l *HTTPListener) Serve(handler netpoll.Handler) error {
 	if handler == nil {
 		return ErrHandler
@@ -131,6 +141,7 @@ func (l *HTTPListener) Serve(handler netpoll.Handler) error {
 	return l.server.Serve(l.l)
 }
 
+// ServeData serves the opened func and the serve func by the netpoll.
 func (l *HTTPListener) ServeData(opened func(net.Conn) error, serve func(req []byte) (res []byte)) error {
 	if serve == nil {
 		return ErrServe
@@ -185,6 +196,7 @@ func (l *HTTPListener) ServeData(opened func(net.Conn) error, serve func(req []b
 	return l.server.Serve(l.l)
 }
 
+// ServeConn serves the opened func and the serve func by the netpoll.
 func (l *HTTPListener) ServeConn(opened func(net.Conn) (Context, error), serve func(Context) error) error {
 	if opened == nil {
 		return ErrOpened
@@ -217,6 +229,7 @@ func (l *HTTPListener) ServeConn(opened func(net.Conn) (Context, error), serve f
 	return l.server.Serve(l.l)
 }
 
+// ServeMessages serves the opened func and the serve func by the netpoll.
 func (l *HTTPListener) ServeMessages(opened func(Messages) (Context, error), serve func(Context) error) error {
 	if opened == nil {
 		return ErrOpened
@@ -250,6 +263,7 @@ func (l *HTTPListener) ServeMessages(opened func(Messages) (Context, error), ser
 	return l.server.Serve(l.l)
 }
 
+// Close closes the listener.
 func (l *HTTPListener) Close() error {
 	if l.server != nil {
 		return l.server.Close()
@@ -257,6 +271,7 @@ func (l *HTTPListener) Close() error {
 	return l.l.Close()
 }
 
+// Addr returns the listener's network address.
 func (l *HTTPListener) Addr() net.Addr {
 	return l.l.Addr()
 }
@@ -268,10 +283,10 @@ func upgradeHTTPConn(conn net.Conn) net.Conn {
 		return nil
 	}
 	res := &response{conn: conn}
-	return upgradeHttp(res, req)
+	return upgradeHTTP(res, req)
 }
 
-func upgradeHttp(w http.ResponseWriter, r *http.Request) net.Conn {
+func upgradeHTTP(w http.ResponseWriter, r *http.Request) net.Conn {
 	if r.Method != "CONNECT" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		io.WriteString(w, "405 must CONNECT\n")
