@@ -33,10 +33,15 @@ func assignPool(size int) *sync.Pool {
 	}
 }
 
+// Messages interface is used to read and write message.
 type Messages interface {
+	// SetConcurrency sets concurrency function to enable auto batch writer for improving throughput.
 	SetConcurrency(concurrency func() int)
+	// ReadMessage reads single message frame from the Messages.
 	ReadMessage() ([]byte, error)
+	// WriteMessage writes data as a message frame to the Messages.
 	WriteMessage([]byte) error
+	// Close closes the Messages.
 	Close() error
 }
 
@@ -57,6 +62,7 @@ type messages struct {
 	closed          int32
 }
 
+// NewMessages returns a new messages.
 func NewMessages(rwc io.ReadWriteCloser, shared bool, writeBufferSize int, readBufferSize int) Messages {
 	if writeBufferSize < 1 {
 		writeBufferSize = bufferSize
