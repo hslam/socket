@@ -33,6 +33,13 @@ func assignPool(size int) *sync.Pool {
 	}
 }
 
+type Messages interface {
+	SetConcurrency(concurrency func() int)
+	ReadMessage() ([]byte, error)
+	WriteMessage([]byte) error
+	Close() error
+}
+
 type messages struct {
 	shared          bool
 	reading         sync.Mutex

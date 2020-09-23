@@ -23,13 +23,7 @@ var ErrNetwork = errors.New("network is not supported")
 type Conn interface {
 	net.Conn
 	Messages() Messages
-}
-
-type Messages interface {
-	SetConcurrency(concurrency func() int)
-	ReadMessage() ([]byte, error)
-	WriteMessage([]byte) error
-	Close() error
+	Connection() net.Conn
 }
 
 type Dialer interface {

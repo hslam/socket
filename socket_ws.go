@@ -23,6 +23,10 @@ type WSConn struct {
 	*websocket.Conn
 }
 
+func (c *WSConn) Connection() net.Conn {
+	return c.Conn
+}
+
 func (c *WSConn) Messages() Messages {
 	return c.Conn
 }

@@ -30,8 +30,12 @@ type HTTPConn struct {
 	net.Conn
 }
 
+func (c *HTTPConn) Connection() net.Conn {
+	return c.Conn
+}
+
 func (c *HTTPConn) Messages() Messages {
-	return NewMessages(c, false, 0, 0)
+	return NewMessages(c.Conn, false, 0, 0)
 }
 
 // NewHTTPSocket returns a new HTTP socket.

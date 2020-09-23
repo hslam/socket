@@ -18,8 +18,12 @@ type UNIXConn struct {
 	net.Conn
 }
 
+func (c *UNIXConn) Connection() net.Conn {
+	return c.Conn
+}
+
 func (c *UNIXConn) Messages() Messages {
-	return NewMessages(c, false, 0, 0)
+	return NewMessages(c.Conn, false, 0, 0)
 }
 
 // NewUNIXSocket returns a new UNIX socket.

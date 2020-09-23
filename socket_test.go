@@ -69,6 +69,7 @@ func testSocket(serverSock Socket, clientSock Socket, scheme string, t *testing.
 	if err != nil {
 		t.Error(err)
 	}
+	conn.Connection()
 	messages := conn.Messages()
 	str := "Hello World"
 	str = strings.Repeat(str, 50)

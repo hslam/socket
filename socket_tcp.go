@@ -17,8 +17,12 @@ type TCPConn struct {
 	net.Conn
 }
 
+func (c *TCPConn) Connection() net.Conn {
+	return c.Conn
+}
+
 func (c *TCPConn) Messages() Messages {
-	return NewMessages(c, false, 0, 0)
+	return NewMessages(c.Conn, false, 0, 0)
 }
 
 // NewTCPSocket returns a new TCP socket.
