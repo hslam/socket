@@ -624,9 +624,9 @@ func TestAddress(t *testing.T) {
 	}
 }
 
-func TestUrl(t *testing.T) {
+func TestURL(t *testing.T) {
 	sock := NewTCPSocket(nil)
-	url := Url(sock, "localhost:9999")
+	url := URL(sock, "localhost:9999")
 	if url != "tcp://localhost:9999" {
 		t.Error(url)
 	}
