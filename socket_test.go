@@ -410,7 +410,7 @@ func testSocketServeConn(serverSock Socket, clientSock Socket, t *testing.T) {
 				return err
 			}
 			_, err = c.Conn.Write(c.buf[:n])
-			return nil
+			return err
 		})
 	}()
 	conn, err := clientSock.Dial(addr)
@@ -474,7 +474,7 @@ func testSocketServeConnTLS(serverSock Socket, clientSock Socket, t *testing.T) 
 				return err
 			}
 			_, err = c.Conn.Write(c.buf[:n])
-			return nil
+			return err
 		})
 	}()
 	_, err = clientSock.Dial(addr)

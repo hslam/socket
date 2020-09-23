@@ -254,7 +254,7 @@ func TestHTTPSocketServeConn(t *testing.T) {
 				return err
 			}
 			_, err = c.Conn.Write(c.buf[:n])
-			return nil
+			return err
 		})
 	}()
 	_, err = clientSock.Dial(addr)
