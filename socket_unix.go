@@ -210,7 +210,7 @@ func (l *UNIXListener) ServeMessages(opened func(Messages) (Context, error), ser
 			}
 			conn = tlsConn
 		}
-		messages := NewMessages(conn, false, 0, 0)
+		messages := NewMessages(conn, true, 0, 0)
 		return opened(messages)
 	}
 	Serve := func(context netpoll.Context) error {

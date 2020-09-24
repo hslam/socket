@@ -206,7 +206,7 @@ func (l *TCPListener) ServeMessages(opened func(Messages) (Context, error), serv
 			}
 			conn = tlsConn
 		}
-		messages := NewMessages(conn, false, 0, 0)
+		messages := NewMessages(conn, true, 0, 0)
 		return opened(messages)
 	}
 	Serve := func(context netpoll.Context) error {
