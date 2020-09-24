@@ -1,9 +1,15 @@
 # socket
+[![GoDoc](https://godoc.org/github.com/hslam/socket?status.svg)](https://godoc.org/github.com/hslam/socket)
+[![Build Status](https://travis-ci.org/hslam/socket.svg?branch=master)](https://travis-ci.org/hslam/socket)
+[![codecov](https://codecov.io/gh/hslam/socket/branch/master/graph/badge.svg)](https://codecov.io/gh/hslam/socket)
+[![Go Report Card](https://goreportcard.com/badge/github.com/hslam/socket?v=7e100)](https://goreportcard.com/report/github.com/hslam/socket)
+[![LICENSE](https://img.shields.io/github/license/hslam/socket.svg?style=flat-square)](https://github.com/hslam/socket/blob/master/LICENSE)
+
 Package socket implements a network socket that supports TCP, UNIX, HTTP and WS.
 
 ## Feature
 * TCP / UNIX / HTTP / WS
-* [netpoll](https://github.com/hslam/netpoll "netpoll")(Epoll / Kqueue)
+* Epoll / Kqueue ( [netpoll](https://github.com/hslam/netpoll "netpoll") )
 
 ## Get started
 
