@@ -1,5 +1,5 @@
 # socket
-[![GoDoc](https://godoc.org/github.com/hslam/socket?status.svg)](https://godoc.org/github.com/hslam/socket)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/hslam/socket)](https://pkg.go.dev/github.com/hslam/socket)
 [![Build Status](https://travis-ci.org/hslam/socket.svg?branch=master)](https://travis-ci.org/hslam/socket)
 [![codecov](https://codecov.io/gh/hslam/socket/branch/master/graph/badge.svg)](https://codecov.io/gh/hslam/socket)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hslam/socket?v=7e100)](https://goreportcard.com/report/github.com/hslam/socket)
@@ -10,6 +10,7 @@ Package socket implements a network socket that supports TCP, UNIX, HTTP and WS.
 ## Feature
 * TCP / UNIX / HTTP / WS
 * Epoll / Kqueue ( [netpoll](https://github.com/hslam/netpoll "netpoll") )
+* TLS
 
 ## Get started
 
@@ -24,7 +25,7 @@ import "github.com/hslam/socket"
 ### Usage
 #### Example
 
-**server.go**
+server.go
 ```go
 package main
 
@@ -71,7 +72,7 @@ func main() {
 }
 ```
 
-**server_poll.go**
+server_poll.go
 ```go
 package main
 
@@ -111,7 +112,7 @@ func main() {
 }
 ```
 
-**client.go**
+client.go
 ```go
 package main
 
@@ -164,6 +165,6 @@ Hello World
 This package is licensed under a MIT license (Copyright (c) 2020 Meng Huang)
 
 
-### Authors
+### Author
 socket was written by Meng Huang.
 
