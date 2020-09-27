@@ -12,6 +12,13 @@ Package socket implements a network socket that supports TCP, UNIX, HTTP and WS.
 * Epoll / Kqueue ( [netpoll](https://github.com/hslam/netpoll "netpoll") )
 * TLS
 
+## [Benchmark](https://github.com/hslam/socket-benchmark "socket-benchmark")
+
+##### Socket QPS
+
+<img src="https://raw.githubusercontent.com/hslam/socket/master/socket-qps.png"  alt="socket" align=center>
+
+
 ## Get started
 
 ### Install
