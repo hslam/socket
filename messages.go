@@ -6,6 +6,7 @@ package socket
 import (
 	"github.com/hslam/writer"
 	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -145,6 +146,10 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 		}
 		n, err := m.reader.Read(readBuffer)
 		if err != nil {
+			errMsg := err.Error()
+			if strings.Contains(errMsg, "use of closed network connection") || strings.Contains(errMsg, "connection reset by peer") {
+				err = io.EOF
+			}
 			if m.shared {
 				m.readPool.Put(readBuffer)
 			}
@@ -187,6 +192,12 @@ func (m *messages) WriteMessage(b []byte) error {
 	buf[7] = uint8(t >> 56)
 	copy(writeBuffer[8:], b)
 	_, err := m.writer.Write(writeBuffer[:size])
+	if err != nil {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "use of closed network connection") || strings.Contains(errMsg, "connection reset by peer") {
+			err = io.EOF
+		}
+	}
 	if m.shared {
 		m.writePool.Put(writeBuffer)
 	} else {

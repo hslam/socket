@@ -6,6 +6,7 @@ package socket
 import (
 	"errors"
 	"github.com/hslam/netpoll"
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -22,6 +23,8 @@ func TestSocket(t *testing.T) {
 	testSocket(NewUNIXSocket(DefalutTLSConfig()), NewUNIXSocket(SkipVerifyTLSConfig()), "unixs", t)
 	testSocket(NewHTTPSocket(DefalutTLSConfig()), NewHTTPSocket(SkipVerifyTLSConfig()), "https", t)
 	testSocket(NewWSSocket(DefalutTLSConfig()), NewWSSocket(SkipVerifyTLSConfig()), "wss", t)
+	testTCPSocket(NewTCPSocket(nil), NewTCPSocket(nil), "tcp", t)
+
 }
 
 func testSocket(serverSock Socket, clientSock Socket, scheme string, t *testing.T) {
@@ -40,7 +43,6 @@ func testSocket(serverSock Socket, clientSock Socket, scheme string, t *testing.
 	if err != nil {
 		t.Error(err)
 	}
-
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
@@ -82,6 +84,76 @@ func testSocket(serverSock Socket, clientSock Socket, scheme string, t *testing.
 		t.Errorf("error %s != %s", string(msg), str)
 	}
 	messages.Close()
+	l.Addr()
+	l.Close()
+	wg.Wait()
+}
+
+func testTCPSocket(serverSock Socket, clientSock Socket, scheme string, t *testing.T) {
+	var addr = ":9999"
+	if serverSock.Scheme() != scheme {
+		t.Error(serverSock.Scheme())
+	}
+	if _, err := clientSock.Dial("-1"); err == nil {
+		t.Error("should be missing port in address / no such file or directory")
+	}
+	if _, err := clientSock.Dial(addr); err == nil {
+		t.Error("should be refused")
+	}
+
+	l, err := serverSock.Listen(addr)
+	if err != nil {
+		t.Error(err)
+	}
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				return
+			}
+			wg.Add(1)
+			go func(conn Conn) {
+				defer wg.Done()
+				messages := conn.Messages()
+				for {
+					msg, err := messages.ReadMessage()
+					if err != nil {
+						break
+					}
+					messages.WriteMessage(msg)
+				}
+				messages.Close()
+			}(conn)
+		}
+	}()
+	conn, err := clientSock.Dial(addr)
+	if err != nil {
+		t.Error(err)
+	}
+	conn.Connection()
+	messages := conn.Messages()
+	str := "Hello World"
+	str = strings.Repeat(str, 50)
+	messages.WriteMessage([]byte(str))
+	msg, err := messages.ReadMessage()
+	if err != nil {
+		t.Error(err)
+	}
+	if string(msg) != str {
+		t.Errorf("error %s != %s", string(msg), str)
+	}
+	messages.Close()
+	{
+		if err := messages.WriteMessage([]byte(str)); err != io.EOF {
+			t.Error(err)
+		}
+		if _, err := messages.ReadMessage(); err != io.EOF {
+			t.Error(err)
+		}
+	}
 	l.Addr()
 	l.Close()
 	wg.Wait()
