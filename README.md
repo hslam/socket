@@ -9,14 +9,14 @@ Package socket implements a network socket that supports TCP, UNIX, HTTP and WS.
 
 ## Feature
 * TCP / UNIX / HTTP / WS
-* Epoll / Kqueue ( [netpoll](https://github.com/hslam/netpoll "netpoll") )
+* [Epoll / Kqueue](https://github.com/hslam/netpoll "netpoll")
 * TLS
 
 ## [Benchmark](https://github.com/hslam/socket-benchmark "socket-benchmark")
 
 ##### Socket QPS
 
-<img src="https://raw.githubusercontent.com/hslam/socket/master/socket-qps.png" width = "480" height = "360" alt="socket" align=center>
+<img src="https://raw.githubusercontent.com/hslam/socket-benchmark/master/socket-qps.png" width = "480" height = "360" alt="socket" align=center>
 
 
 ## Get started
