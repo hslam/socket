@@ -71,8 +71,8 @@ func NewMessages(rwc io.ReadWriteCloser, shared bool, writeBufferSize int, readB
 	if readBufferSize < 1 {
 		readBufferSize = bufferSize
 	}
-	writeBufferSize += 8
-	readBufferSize += 8
+	writeBufferSize += 10
+	readBufferSize += 10
 	var readBuffer []byte
 	var writeBuffer []byte
 	var readPool *sync.Pool
@@ -114,26 +114,36 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 		length := uint64(len(m.buffer))
 		var i uint64 = 0
 		for i < length {
-			if length < i+8 {
-				break
-			}
+			var s uint
 			var msgLength uint64
-			buf := m.buffer[i : i+8]
 			var t uint64
-			t = uint64(buf[0])
-			t |= uint64(buf[1]) << 8
-			t |= uint64(buf[2]) << 16
-			t |= uint64(buf[3]) << 24
-			t |= uint64(buf[4]) << 32
-			t |= uint64(buf[5]) << 40
-			t |= uint64(buf[6]) << 48
-			t |= uint64(buf[7]) << 56
-			msgLength = t
-			if length < i+8+msgLength {
+			var b byte
+			if length < i+1 {
 				break
 			}
-			p = m.buffer[i+8 : i+8+msgLength]
-			i += 8 + msgLength
+			b = m.buffer[i]
+			if b > 127 {
+				for b >= 0x80 {
+					t |= uint64(b&0x7f) << s
+					s += 7
+					i++
+					if length < i+1 {
+						break
+					}
+					b = m.buffer[i]
+				}
+			}
+			if i > 9 || i == 9 && b > 1 {
+				panic("varint overflows a 64-bit integer")
+			}
+			t |= uint64(b) << s
+			i++
+			msgLength = t
+			if length < i+msgLength {
+				break
+			}
+			p = m.buffer[i : i+msgLength]
+			i += msgLength
 			m.buffer = m.buffer[i:]
 			return
 		}
@@ -167,7 +177,7 @@ func (m *messages) WriteMessage(b []byte) error {
 	m.writing.Lock()
 	defer m.writing.Unlock()
 	var length = uint64(len(b))
-	var size = 8 + length
+	var size = 10 + length
 	var writeBuffer []byte
 	if m.shared {
 		writeBuffer = m.writePool.Get().([]byte)
@@ -181,17 +191,20 @@ func (m *messages) WriteMessage(b []byte) error {
 		writeBuffer = make([]byte, size)
 	}
 	var t = length
-	var buf = writeBuffer[0:8]
-	buf[0] = uint8(t)
-	buf[1] = uint8(t >> 8)
-	buf[2] = uint8(t >> 16)
-	buf[3] = uint8(t >> 24)
-	buf[4] = uint8(t >> 32)
-	buf[5] = uint8(t >> 40)
-	buf[6] = uint8(t >> 48)
-	buf[7] = uint8(t >> 56)
-	copy(writeBuffer[8:], b)
-	_, err := m.writer.Write(writeBuffer[:size])
+	var buf = writeBuffer[0:10]
+	i := 0
+	if t > 127 {
+		for t >= 0x80 {
+			buf[i] = byte(t) | 0x80
+			t >>= 7
+			i++
+		}
+	}
+	buf[i] = byte(t)
+	i++
+	n := copy(writeBuffer[i:], b)
+	i += n
+	_, err := m.writer.Write(writeBuffer[:i])
 	if err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "use of closed network connection") || strings.Contains(errMsg, "connection reset by peer") {
