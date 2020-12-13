@@ -113,13 +113,13 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 	for {
 		length := uint64(len(m.buffer))
 		var i uint64 = 0
-		for i < length {
+		if i < length {
 			var s uint
 			var msgLength uint64
 			var t uint64
 			var b byte
 			if length < i+1 {
-				break
+				goto read
 			}
 			b = m.buffer[i]
 			if b > 127 {
@@ -128,7 +128,7 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 					s += 7
 					i++
 					if length < i+1 {
-						break
+						goto read
 					}
 					b = m.buffer[i]
 				}
@@ -140,13 +140,14 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 			i++
 			msgLength = t
 			if length < i+msgLength {
-				break
+				goto read
 			}
 			p = m.buffer[i : i+msgLength]
 			i += msgLength
 			m.buffer = m.buffer[i:]
 			return
 		}
+	read:
 		var readBuffer []byte
 		if m.shared {
 			readBuffer = m.readPool.Get().([]byte)
