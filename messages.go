@@ -103,13 +103,12 @@ func (m *messages) SetConcurrency(concurrency func() int) {
 		return
 	}
 	m.writing.Lock()
-	defer m.writing.Unlock()
 	m.writer = writer.NewWriter(m.writer, concurrency, 65536, false)
+	m.writing.Unlock()
 }
 
 func (m *messages) ReadMessage() (p []byte, err error) {
 	m.reading.Lock()
-	defer m.reading.Unlock()
 	for {
 		length := uint64(len(m.buffer))
 		var i uint64 = 0
@@ -145,6 +144,7 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 			p = m.buffer[i : i+msgLength]
 			i += msgLength
 			m.buffer = m.buffer[i:]
+			m.reading.Unlock()
 			return
 		}
 	read:
@@ -157,6 +157,7 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 		}
 		n, err := m.reader.Read(readBuffer)
 		if err != nil {
+			m.reading.Unlock()
 			errMsg := err.Error()
 			if strings.Contains(errMsg, "use of closed network connection") || strings.Contains(errMsg, "connection reset by peer") {
 				err = io.EOF
@@ -176,7 +177,6 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 
 func (m *messages) WriteMessage(b []byte) error {
 	m.writing.Lock()
-	defer m.writing.Unlock()
 	var length = uint64(len(b))
 	var size = 10 + length
 	var writeBuffer []byte
@@ -206,6 +206,7 @@ func (m *messages) WriteMessage(b []byte) error {
 	n := copy(writeBuffer[i:], b)
 	i += n
 	_, err := m.writer.Write(writeBuffer[:i])
+	m.writing.Unlock()
 	if err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "use of closed network connection") || strings.Contains(errMsg, "connection reset by peer") {
@@ -214,8 +215,6 @@ func (m *messages) WriteMessage(b []byte) error {
 	}
 	if m.shared {
 		m.writePool.Put(writeBuffer)
-	} else {
-		m.writeBuffer = writeBuffer
 	}
 	return err
 }
