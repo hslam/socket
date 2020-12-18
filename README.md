@@ -1,6 +1,6 @@
 # socket
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/hslam/socket)](https://pkg.go.dev/github.com/hslam/socket)
-[![Build Status](https://api.travis-ci.com/hslam/socket.svg?branch=master)](https://travis-ci.com/hslam/socket)
+[![Build Status](https://github.com/hslam/socket/workflows/build/badge.svg)](https://github.com/hslam/socket/actions)
 [![codecov](https://codecov.io/gh/hslam/socket/branch/master/graph/badge.svg)](https://codecov.io/gh/hslam/socket)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hslam/socket)](https://goreportcard.com/report/github.com/hslam/socket)
 [![LICENSE](https://img.shields.io/github/license/hslam/socket.svg?style=flat-square)](https://github.com/hslam/socket/blob/master/LICENSE)
