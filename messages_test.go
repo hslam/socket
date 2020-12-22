@@ -41,8 +41,8 @@ func TestMessages(t *testing.T) {
 	if _, err := messages.ReadMessage(); err != io.EOF {
 		t.Error(err)
 	}
-	messages.SetConcurrency(nil)
-	messages.SetConcurrency(concurrency)
+	messages.(Batch).SetConcurrency(nil)
+	messages.(Batch).SetConcurrency(concurrency)
 	messages.Close()
 	messages.Close()
 }

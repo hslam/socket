@@ -34,10 +34,14 @@ func assignPool(size int) *sync.Pool {
 	}
 }
 
+// Batch interface is used to write batch messages.
+type Batch interface {
+	// SetConcurrency sets a callback function concurrency to enable auto batch writer for improving throughput.
+	SetConcurrency(concurrency func() int)
+}
+
 // Messages interface is used to read and write message.
 type Messages interface {
-	// SetConcurrency sets concurrency function to enable auto batch writer for improving throughput.
-	SetConcurrency(concurrency func() int)
 	// ReadMessage reads single message frame from the Messages.
 	ReadMessage() ([]byte, error)
 	// WriteMessage writes data as a message frame to the Messages.
