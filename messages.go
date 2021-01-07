@@ -107,7 +107,7 @@ func (m *messages) SetConcurrency(concurrency func() int) {
 		return
 	}
 	m.writing.Lock()
-	m.writer = writer.NewWriter(m.writer, concurrency, 65536, false)
+	m.writer = writer.NewWriter(m.writer, concurrency, 65536, m.shared)
 	m.writing.Unlock()
 }
 
