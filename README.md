@@ -66,8 +66,9 @@ func main() {
 		}
 		go func(conn socket.Conn) {
 			messages := conn.Messages()
+			buf := make([]byte, 65536)
 			for {
-				msg, err := messages.ReadMessage()
+				msg, err := messages.ReadMessage(buf)
 				if err != nil {
 					break
 				}
@@ -86,6 +87,7 @@ package main
 import (
 	"flag"
 	"github.com/hslam/socket"
+	"sync"
 )
 
 var network string
@@ -106,11 +108,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	bufferPool := &sync.Pool{New: func() interface{} { return make([]byte, 65536) }}
 	l.ServeMessages(func(messages socket.Messages) (socket.Context, error) {
 		return messages, nil
 	}, func(context socket.Context) error {
 		messages := context.(socket.Messages)
-		msg, err := messages.ReadMessage()
+		buf := bufferPool.Get().([]byte)
+		defer bufferPool.Put(buf)
+		msg, err := messages.ReadMessage(buf)
 		if err != nil {
 			return err
 		}
@@ -148,12 +153,13 @@ func main() {
 		panic(err)
 	}
 	messages := conn.Messages()
+	buf := make([]byte, 65536)
 	for i := 0; i < 1; i++ {
 		err := messages.WriteMessage([]byte("Hello World"))
 		if err != nil {
 			panic(err)
 		}
-		msg, err := messages.ReadMessage()
+		msg, err := messages.ReadMessage(buf)
 		if err != nil {
 			panic(err)
 		}
@@ -167,10 +173,8 @@ func main() {
 Hello World
 ```
 
-
 ### License
 This package is licensed under a MIT license (Copyright (c) 2020 Meng Huang)
-
 
 ### Author
 socket was written by Meng Huang.

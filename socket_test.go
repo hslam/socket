@@ -57,7 +57,7 @@ func testSocket(serverSock Socket, clientSock Socket, scheme string, t *testing.
 				defer wg.Done()
 				messages := conn.Messages()
 				for {
-					msg, err := messages.ReadMessage()
+					msg, err := messages.ReadMessage(nil)
 					if err != nil {
 						break
 					}
@@ -76,7 +76,7 @@ func testSocket(serverSock Socket, clientSock Socket, scheme string, t *testing.
 	str := "Hello World"
 	str = strings.Repeat(str, 50)
 	messages.WriteMessage([]byte(str))
-	msg, err := messages.ReadMessage()
+	msg, err := messages.ReadMessage(nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -119,7 +119,7 @@ func testTCPSocket(serverSock Socket, clientSock Socket, scheme string, t *testi
 				defer wg.Done()
 				messages := conn.Messages()
 				for {
-					msg, err := messages.ReadMessage()
+					msg, err := messages.ReadMessage(nil)
 					if err != nil {
 						break
 					}
@@ -138,7 +138,7 @@ func testTCPSocket(serverSock Socket, clientSock Socket, scheme string, t *testi
 	str := "Hello World"
 	str = strings.Repeat(str, 50)
 	messages.WriteMessage([]byte(str))
-	msg, err := messages.ReadMessage()
+	msg, err := messages.ReadMessage(nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -150,7 +150,7 @@ func testTCPSocket(serverSock Socket, clientSock Socket, scheme string, t *testi
 		if err := messages.WriteMessage([]byte(str)); err != io.EOF {
 			t.Error(err)
 		}
-		if _, err := messages.ReadMessage(); err != io.EOF {
+		if _, err := messages.ReadMessage(nil); err != io.EOF {
 			t.Error(err)
 		}
 	}
@@ -188,7 +188,7 @@ func testSocketTLS(serverSock Socket, clientSock Socket, t *testing.T) {
 				defer wg.Done()
 				messages := conn.Messages()
 				for {
-					msg, err := messages.ReadMessage()
+					msg, err := messages.ReadMessage(nil)
 					if err != nil {
 						break
 					}
@@ -591,7 +591,7 @@ func testSocketServeMessages(serverSock Socket, clientSock Socket, t *testing.T)
 			return messages, nil
 		}, func(context Context) error {
 			messages := context.(Messages)
-			msg, err := messages.ReadMessage()
+			msg, err := messages.ReadMessage(nil)
 			if err != nil {
 				return err
 			}
@@ -606,7 +606,7 @@ func testSocketServeMessages(serverSock Socket, clientSock Socket, t *testing.T)
 	str := "Hello World"
 	str = strings.Repeat(str, 50)
 	messages.WriteMessage([]byte(str))
-	msg, err := messages.ReadMessage()
+	msg, err := messages.ReadMessage(nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -641,7 +641,7 @@ func testSocketServeMessagesTLS(serverSock Socket, clientSock Socket, t *testing
 			return messages, nil
 		}, func(context Context) error {
 			messages := context.(Messages)
-			msg, err := messages.ReadMessage()
+			msg, err := messages.ReadMessage(nil)
 			if err != nil {
 				return err
 			}

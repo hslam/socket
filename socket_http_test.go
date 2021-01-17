@@ -70,7 +70,7 @@ func TestHTTPSocketDial(t *testing.T) {
 				defer wg.Done()
 				messages := conn.Messages()
 				for {
-					msg, err := messages.ReadMessage()
+					msg, err := messages.ReadMessage(nil)
 					if err != nil {
 						break
 					}
@@ -114,7 +114,7 @@ func TestHTTPSocketAccept(t *testing.T) {
 				defer wg.Done()
 				messages := conn.Messages()
 				for {
-					msg, err := messages.ReadMessage()
+					msg, err := messages.ReadMessage(nil)
 					if err != nil {
 						break
 					}
@@ -158,7 +158,7 @@ func TestHTTPSocketAcceptTLS(t *testing.T) {
 				defer wg.Done()
 				messages := conn.Messages()
 				for {
-					msg, err := messages.ReadMessage()
+					msg, err := messages.ReadMessage(nil)
 					if err != nil {
 						break
 					}
@@ -292,7 +292,7 @@ func TestHTTPSocketServeMessages(t *testing.T) {
 			return messages, nil
 		}, func(context Context) error {
 			messages := context.(Messages)
-			msg, err := messages.ReadMessage()
+			msg, err := messages.ReadMessage(nil)
 			if err != nil {
 				return err
 			}

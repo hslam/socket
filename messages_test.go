@@ -33,12 +33,12 @@ func TestMessages(t *testing.T) {
 		t.Log(err)
 	}
 	file.Seek(0, os.SEEK_SET)
-	if msg, err := messages.ReadMessage(); err != nil {
+	if msg, err := messages.ReadMessage(make([]byte, 65536)); err != nil {
 		t.Error(err)
 	} else if string(msg) != str {
 		t.Error(string(msg))
 	}
-	if _, err := messages.ReadMessage(); err != io.EOF {
+	if _, err := messages.ReadMessage(nil); err != io.EOF {
 		t.Error(err)
 	}
 	messages.(Batch).SetConcurrency(nil)
@@ -73,7 +73,7 @@ func TestMessagesRetain(t *testing.T) {
 		t.Log(err)
 	}
 	file.Seek(0, os.SEEK_SET)
-	if msg, err := messages.ReadMessage(); err != nil {
+	if msg, err := messages.ReadMessage(nil); err != nil {
 		t.Error(err)
 	} else if string(msg) != str {
 		t.Error(string(msg))

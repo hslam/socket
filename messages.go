@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 )
 
-const bufferSize = 65528
+const bufferSize = 65526
 
 var (
 	buffers = sync.Map{}
@@ -43,7 +43,7 @@ type Batch interface {
 // Messages interface is used to read and write message.
 type Messages interface {
 	// ReadMessage reads single message frame from the Messages.
-	ReadMessage() ([]byte, error)
+	ReadMessage(buf []byte) ([]byte, error)
 	// WriteMessage writes data as a message frame to the Messages.
 	WriteMessage([]byte) error
 	// Close closes the Messages.
@@ -111,7 +111,7 @@ func (m *messages) SetConcurrency(concurrency func() int) {
 	m.writing.Unlock()
 }
 
-func (m *messages) ReadMessage() (p []byte, err error) {
+func (m *messages) ReadMessage(buf []byte) (p []byte, err error) {
 	m.reading.Lock()
 	for {
 		length := uint64(len(m.buffer))
@@ -145,9 +145,15 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 			if length < i+msgLength {
 				goto read
 			}
-			p = m.buffer[i : i+msgLength]
+			if uint64(cap(buf)) >= msgLength {
+				p = buf[:msgLength]
+			} else {
+				p = make([]byte, msgLength)
+			}
+			copy(p, m.buffer[i:i+msgLength])
 			i += msgLength
-			m.buffer = m.buffer[i:]
+			n := copy(m.buffer, m.buffer[i:])
+			m.buffer = m.buffer[:n]
 			m.reading.Unlock()
 			return
 		}
@@ -171,7 +177,14 @@ func (m *messages) ReadMessage() (p []byte, err error) {
 			}
 			return nil, err
 		} else if n > 0 {
-			m.buffer = append(m.buffer, readBuffer[:n]...)
+			length := len(m.buffer)
+			size := length + n
+			if cap(m.buffer) >= size {
+				m.buffer = m.buffer[:size]
+				copy(m.buffer[length:], readBuffer[:n])
+			} else {
+				m.buffer = append(m.buffer, readBuffer[:n]...)
+			}
 			if m.shared {
 				m.readPool.Put(readBuffer)
 			}

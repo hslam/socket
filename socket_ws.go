@@ -119,7 +119,7 @@ func (l *WSListener) ServeData(opened func(net.Conn) error, serve func(req []byt
 	}
 	Serve := func(context netpoll.Context) error {
 		ws := context.(*websocket.Conn)
-		msg, err := ws.ReadMessage()
+		msg, err := ws.ReadMessage(nil)
 		if err != nil {
 			return err
 		}
