@@ -8,8 +8,8 @@
 Package socket implements a network socket that supports TCP, UNIX, HTTP and WS.
 
 ## Feature
-* TCP / UNIX / HTTP / WS
-* [Epoll / Kqueue](https://github.com/hslam/netpoll "netpoll")
+* TCP/UNIX/HTTP/WS
+* [Epoll/Kqueue](https://github.com/hslam/netpoll "netpoll")
 * TLS
 
 ## [Benchmark](https://github.com/hslam/socket-benchmark "socket-benchmark")
