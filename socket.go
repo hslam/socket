@@ -1,7 +1,7 @@
 // Copyright (c) 2020 Meng Huang (mhboy@outlook.com)
 // This package is licensed under a MIT license that can be found in the LICENSE file.
 
-// Package socket implements a network socket that supports TCP, UNIX, HTTP and WS.
+// Package socket implements a network socket that supports TCP, UNIX, HTTP, WS and INPROC.
 package socket
 
 import (
@@ -101,6 +101,8 @@ func NewSocket(network string, config *tls.Config) (Socket, error) {
 		return NewHTTPSocket(config), nil
 	case "ws", "wss":
 		return NewWSSocket(config), nil
+	case "inproc", "inprocs":
+		return NewINPROCSocket(config), nil
 	default:
 		return nil, ErrNetwork
 	}

@@ -19,12 +19,13 @@ func TestSocket(t *testing.T) {
 	testSocket(NewUNIXSocket(nil), NewUNIXSocket(nil), "unix", t)
 	testSocket(NewHTTPSocket(nil), NewHTTPSocket(nil), "http", t)
 	testSocket(NewWSSocket(nil), NewWSSocket(nil), "ws", t)
+	testSocket(NewINPROCSocket(nil), NewINPROCSocket(nil), "inproc", t)
 	testSocket(NewTCPSocket(DefalutTLSConfig()), NewTCPSocket(SkipVerifyTLSConfig()), "tcps", t)
 	testSocket(NewUNIXSocket(DefalutTLSConfig()), NewUNIXSocket(SkipVerifyTLSConfig()), "unixs", t)
 	testSocket(NewHTTPSocket(DefalutTLSConfig()), NewHTTPSocket(SkipVerifyTLSConfig()), "https", t)
 	testSocket(NewWSSocket(DefalutTLSConfig()), NewWSSocket(SkipVerifyTLSConfig()), "wss", t)
+	testSocket(NewINPROCSocket(DefalutTLSConfig()), NewINPROCSocket(SkipVerifyTLSConfig()), "inprocs", t)
 	testTCPSocket(NewTCPSocket(nil), NewTCPSocket(nil), "tcp", t)
-
 }
 
 func testSocket(serverSock Socket, clientSock Socket, scheme string, t *testing.T) {
@@ -32,9 +33,7 @@ func testSocket(serverSock Socket, clientSock Socket, scheme string, t *testing.
 	if serverSock.Scheme() != scheme {
 		t.Error(serverSock.Scheme())
 	}
-	if _, err := clientSock.Dial("-1"); err == nil {
-		t.Error("should be missing port in address / no such file or directory")
-	}
+
 	if _, err := clientSock.Dial(addr); err == nil {
 		t.Error("should be refused")
 	}
@@ -71,7 +70,14 @@ func testSocket(serverSock Socket, clientSock Socket, scheme string, t *testing.
 	if err != nil {
 		t.Error(err)
 	}
-	conn.Connection()
+	netConn := conn.Connection()
+	netConn.SetWriteDeadline(time.Now().Add(time.Second))
+	netConn.SetReadDeadline(time.Now().Add(time.Second))
+	netConn.SetDeadline(time.Now().Add(time.Second))
+	netConn.LocalAddr()
+	raddr := netConn.RemoteAddr()
+	raddr.Network()
+	raddr.String()
 	messages := conn.Messages()
 	str := "Hello World"
 	str = strings.Repeat(str, 50)
@@ -166,6 +172,7 @@ func TestSocketTLS(t *testing.T) {
 	testSocketTLS(NewUNIXSocket(DefalutTLSConfig()), NewUNIXSocket(config), t)
 	testSocketTLS(NewHTTPSocket(DefalutTLSConfig()), NewHTTPSocket(config), t)
 	testSocketTLS(NewWSSocket(DefalutTLSConfig()), NewWSSocket(config), t)
+	testSocketTLS(NewINPROCSocket(DefalutTLSConfig()), NewINPROCSocket(config), t)
 }
 
 func testSocketTLS(serverSock Socket, clientSock Socket, t *testing.T) {

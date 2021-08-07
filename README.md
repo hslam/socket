@@ -5,10 +5,10 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/hslam/socket)](https://goreportcard.com/report/github.com/hslam/socket)
 [![LICENSE](https://img.shields.io/github/license/hslam/socket.svg?style=flat-square)](https://github.com/hslam/socket/blob/master/LICENSE)
 
-Package socket implements a network socket that supports TCP, UNIX, HTTP and WS.
+Package socket implements a network socket that supports TCP, UNIX, HTTP, WS and INPROC.
 
 ## Feature
-* TCP/UNIX/HTTP/WS
+* TCP/UNIX/HTTP/WS/INPROC
 * [Epoll/Kqueue](https://github.com/hslam/netpoll "netpoll")
 * TLS
 
