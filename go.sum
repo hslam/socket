@@ -1,5 +1,5 @@
-github.com/hslam/inproc v0.0.0-20210807191720-636ebde46906 h1:CyUAlxzc8CN8/Norgx9DiJJ/0q6jIhUOdtmfh2gfIaI=
-github.com/hslam/inproc v0.0.0-20210807191720-636ebde46906/go.mod h1:UDfJZX2mkqDQFBK4P8oSuiM+PC08eis5Vvr0tvdhC3I=
+github.com/hslam/inproc v0.0.0-20210808071438-d2fc848886cb h1:ZotvpqsWEmJLYk0Doq1cbncoNar+21VYgabteGfwTcY=
+github.com/hslam/inproc v0.0.0-20210808071438-d2fc848886cb/go.mod h1:UDfJZX2mkqDQFBK4P8oSuiM+PC08eis5Vvr0tvdhC3I=
 github.com/hslam/mmap v1.0.0 h1:GSp55lZrPDhctob3yE0SqESBjzgCn9cP4iu4Pmmm+gE=
 github.com/hslam/mmap v1.0.0/go.mod h1:mtuj54WoaupC65QteY9RubXVPkQT86Q/Xj0WPzRefFw=
 github.com/hslam/netpoll v0.0.3 h1:qsikv5wKcKX+NHRw/Xrte+b6hBAEzo9ujH3pfmHp5j0=
