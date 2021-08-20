@@ -5,7 +5,6 @@ package socket
 
 import (
 	"crypto/tls"
-	"errors"
 	"github.com/hslam/inproc"
 	"github.com/hslam/netpoll"
 	"net"
@@ -74,6 +73,7 @@ func (t *INPROC) Listen(address string) (Listener, error) {
 // INPROCListener implements the Listener interface.
 type INPROCListener struct {
 	l      net.Listener
+	server *netpoll.Server
 	config *tls.Config
 }
 
@@ -96,22 +96,117 @@ func (l *INPROCListener) Accept() (Conn, error) {
 
 // Serve serves the netpoll.Handler by the netpoll.
 func (l *INPROCListener) Serve(handler netpoll.Handler) error {
-	return errors.New("not pollable")
+	if handler == nil {
+		return ErrHandler
+	}
+	l.server = &netpoll.Server{
+		Handler: handler,
+	}
+	return l.server.Serve(l.l)
 }
 
 // ServeData serves the opened func and the serve func by the netpoll.
 func (l *INPROCListener) ServeData(opened func(net.Conn) error, serve func(req []byte) (res []byte)) error {
-	return errors.New("not pollable")
+	if serve == nil {
+		return ErrServe
+	}
+	type Context struct {
+		Conn net.Conn
+		buf  []byte
+	}
+	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
+		if l.config != nil {
+			tlsConn := tls.Server(conn, l.config)
+			if err := tlsConn.Handshake(); err != nil {
+				conn.Close()
+				return nil, err
+			}
+			conn = tlsConn
+		}
+		if opened != nil {
+			if err := opened(conn); err != nil {
+				conn.Close()
+				return nil, err
+			}
+		}
+		ctx := &Context{
+			Conn: conn,
+			buf:  make([]byte, 1024*64),
+		}
+		return ctx, nil
+	}
+	Serve := func(context netpoll.Context) error {
+		c := context.(*Context)
+		n, err := c.Conn.Read(c.buf)
+		if err != nil {
+			return err
+		}
+		res := serve(c.buf[:n])
+		if len(res) == 0 {
+			return nil
+		}
+		_, err = c.Conn.Write(res)
+		return err
+	}
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 // ServeConn serves the opened func and the serve func by the netpoll.
 func (l *INPROCListener) ServeConn(opened func(net.Conn) (Context, error), serve func(Context) error) error {
-	return errors.New("not pollable")
+	if opened == nil {
+		return ErrOpened
+	} else if serve == nil {
+		return ErrServe
+	}
+	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
+		if l.config != nil {
+			tlsConn := tls.Server(conn, l.config)
+			if err := tlsConn.Handshake(); err != nil {
+				conn.Close()
+				return nil, err
+			}
+			conn = tlsConn
+		}
+		return opened(conn)
+	}
+	Serve := func(context netpoll.Context) error {
+		return serve(context)
+	}
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 // ServeMessages serves the opened func and the serve func by the netpoll.
 func (l *INPROCListener) ServeMessages(opened func(Messages) (Context, error), serve func(Context) error) error {
-	return errors.New("not pollable")
+	if opened == nil {
+		return ErrOpened
+	} else if serve == nil {
+		return ErrServe
+	}
+	Upgrade := func(conn net.Conn) (netpoll.Context, error) {
+		if l.config != nil {
+			tlsConn := tls.Server(conn, l.config)
+			if err := tlsConn.Handshake(); err != nil {
+				conn.Close()
+				return nil, err
+			}
+			conn = tlsConn
+		}
+		messages := NewMessages(conn, true, 0, 0)
+		return opened(messages)
+	}
+	Serve := func(context netpoll.Context) error {
+		return serve(context)
+	}
+	l.server = &netpoll.Server{
+		Handler: netpoll.NewHandler(Upgrade, Serve),
+	}
+	return l.server.Serve(l.l)
 }
 
 // Close closes the listener.
