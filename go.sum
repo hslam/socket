@@ -4,8 +4,8 @@ github.com/hslam/inproc v0.0.0-20210808071438-d2fc848886cb h1:ZotvpqsWEmJLYk0Doq
 github.com/hslam/inproc v0.0.0-20210808071438-d2fc848886cb/go.mod h1:UDfJZX2mkqDQFBK4P8oSuiM+PC08eis5Vvr0tvdhC3I=
 github.com/hslam/mmap v1.0.0 h1:GSp55lZrPDhctob3yE0SqESBjzgCn9cP4iu4Pmmm+gE=
 github.com/hslam/mmap v1.0.0/go.mod h1:mtuj54WoaupC65QteY9RubXVPkQT86Q/Xj0WPzRefFw=
-github.com/hslam/netpoll v0.0.4-0.20211016222116-f948dbdd7fb8 h1:IU/HCcnkgDZIMKWMRj0/dHgEVErIUodJ66sI/q1bqLQ=
-github.com/hslam/netpoll v0.0.4-0.20211016222116-f948dbdd7fb8/go.mod h1:sy+/R4gKsAGZSLS2qHEqGD4bXAWkr06gSdB2H5k2rrk=
+github.com/hslam/netpoll v0.0.4-0.20211024171410-ddd42784a34a h1:bUJNCoZUXZbgcWlcU2l9z4gj4Mu3OclJ3n52UTxmWqw=
+github.com/hslam/netpoll v0.0.4-0.20211024171410-ddd42784a34a/go.mod h1:sy+/R4gKsAGZSLS2qHEqGD4bXAWkr06gSdB2H5k2rrk=
 github.com/hslam/scheduler v0.0.0-20211016221623-d8a3b3e44091 h1:DLe1sldQBK1Euz2ezYs6B2C1kp/F9GzUSo57JEzK+y0=
 github.com/hslam/scheduler v0.0.0-20211016221623-d8a3b3e44091/go.mod h1:5Lu1StnE7hhW2QwdImTNFLdzIUhAUjO7SlLco+H5h9A=
 github.com/hslam/sendfile v1.0.1 h1:0OLb5VRwjdN3q9hkslfk5nPQIrH5UmGTjSuJtV4Zq+8=
