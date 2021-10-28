@@ -34,6 +34,7 @@ func TestMessages(t *testing.T) {
 	}
 	messages.(Batch).SetConcurrency(nil)
 	messages.(Batch).SetConcurrency(concurrency)
+	messages.(Scheduler).SetScheduling(false)
 	messages.Close()
 	messages.Close()
 }

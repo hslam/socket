@@ -14,12 +14,16 @@ import (
 
 const bufferSize = 65526
 
-var buffers = buffer.NewBuffers(1024)
-
 // Batch interface is used to write batch messages.
 type Batch interface {
 	// SetConcurrency sets a callback function concurrency to enable auto batch writer for improving throughput.
 	SetConcurrency(concurrency func() int)
+}
+
+// Scheduler interface is used to set scheduling option.
+type Scheduler interface {
+	// SetScheduling sets scheduling option.
+	SetScheduling(bool)
 }
 
 // Messages interface is used to read and write message.
@@ -34,6 +38,7 @@ type Messages interface {
 
 type messages struct {
 	shared          bool
+	scheduling      bool
 	reading         sync.Mutex
 	writing         sync.Mutex
 	reader          io.Reader
@@ -64,8 +69,8 @@ func NewMessages(rwc io.ReadWriteCloser, shared bool, writeBufferSize int, readB
 	var readPool *buffer.Pool
 	var writePool *buffer.Pool
 	if shared {
-		readPool = buffers.AssignPool(readBufferSize)
-		writePool = buffers.AssignPool(writeBufferSize)
+		readPool = buffer.AssignPool(readBufferSize)
+		writePool = buffer.AssignPool(writeBufferSize)
 	} else {
 		readBuffer = make([]byte, readBufferSize)
 		writeBuffer = make([]byte, writeBufferSize)
@@ -84,12 +89,16 @@ func NewMessages(rwc io.ReadWriteCloser, shared bool, writeBufferSize int, readB
 	}
 }
 
+func (m *messages) SetScheduling(scheduling bool) {
+	m.scheduling = scheduling
+}
+
 func (m *messages) SetConcurrency(concurrency func() int) {
 	if concurrency == nil {
 		return
 	}
 	m.writing.Lock()
-	m.writer = writer.NewWriter(m.writer, concurrency, 65536, m.shared)
+	m.writer = writer.NewWriter(m.writer, concurrency, 65536, m.scheduling || m.shared)
 	m.writing.Unlock()
 }
 
