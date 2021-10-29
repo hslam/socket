@@ -52,7 +52,7 @@ func (t *TCP) Dial(address string) (Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn.SetNoDelay(false)
+	conn.SetNoDelay(true)
 	if t.Config == nil {
 		return &TCPConn{conn}, err
 	}
@@ -91,7 +91,7 @@ func (l *TCPListener) Accept() (Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn.SetNoDelay(false)
+	conn.SetNoDelay(true)
 	if l.config == nil {
 		return &TCPConn{conn}, err
 	}
