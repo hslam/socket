@@ -188,17 +188,17 @@ func (m *messages) WriteMessage(b []byte) error {
 	var length = uint64(len(b))
 	var size = 10 + length
 	var writeBuffer []byte
-	if m.shared {
+	var big bool
+	if m.writeBufferSize < int(size) {
+		big = true
+		writeBuffer = buffer.GetBuffer(int(size))
+	} else if m.shared {
 		writeBuffer = m.writePool.GetBuffer(m.writeBufferSize)
 		writeBuffer = writeBuffer[:cap(writeBuffer)]
 	} else {
 		writeBuffer = m.writeBuffer
 	}
-	if uint64(cap(writeBuffer)) >= size {
-		writeBuffer = writeBuffer[:size]
-	} else {
-		writeBuffer = make([]byte, size)
-	}
+	writeBuffer = writeBuffer[:size]
 	var t = length
 	var buf = writeBuffer[0:10]
 	i := 0
@@ -221,7 +221,9 @@ func (m *messages) WriteMessage(b []byte) error {
 			err = io.EOF
 		}
 	}
-	if m.shared {
+	if big {
+		buffer.PutBuffer(writeBuffer)
+	} else if m.shared {
 		m.writePool.PutBuffer(writeBuffer)
 	}
 	return err
