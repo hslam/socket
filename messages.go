@@ -41,6 +41,7 @@ type messages struct {
 	scheduling      bool
 	reading         sync.Mutex
 	writing         sync.Mutex
+	rwc             io.ReadWriteCloser
 	reader          io.Reader
 	writer          io.Writer
 	closer          io.Closer
@@ -77,6 +78,7 @@ func NewMessages(rwc io.ReadWriteCloser, shared bool, writeBufferSize int, readB
 	}
 	return &messages{
 		shared:          shared,
+		rwc:             rwc,
 		reader:          rwc,
 		writer:          rwc,
 		closer:          rwc,
@@ -95,10 +97,18 @@ func (m *messages) SetScheduling(scheduling bool) {
 
 func (m *messages) SetConcurrency(concurrency func() int) {
 	if concurrency == nil {
+		if w, ok := m.writer.(*writer.Writer); ok {
+			w.Close()
+		}
+		m.writing.Lock()
+		m.writer = m.rwc
+		m.writing.Unlock()
 		return
 	}
 	m.writing.Lock()
-	m.writer = writer.NewWriter(m.writer, concurrency, 65536, m.scheduling || m.shared)
+	if _, ok := m.writer.(*writer.Writer); !ok {
+		m.writer = writer.NewWriter(m.writer, concurrency, 65536, m.scheduling || m.shared)
+	}
 	m.writing.Unlock()
 }
 
