@@ -22,7 +22,7 @@ type UNIXConn struct {
 
 // Messages returns a new Messages.
 func (c *UNIXConn) Messages() Messages {
-	return NewMessages(c.Conn, false, 0, 0)
+	return NewMessages(c.Conn, false)
 }
 
 // Connection returns the net.Conn.
@@ -210,7 +210,7 @@ func (l *UNIXListener) ServeMessages(opened func(Messages) (Context, error), ser
 			}
 			conn = tlsConn
 		}
-		messages := NewMessages(conn, true, 0, 0)
+		messages := NewMessages(conn, true)
 		return opened(messages)
 	}
 	Serve := func(context netpoll.Context) error {

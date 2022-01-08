@@ -12,18 +12,16 @@ import (
 	"sync/atomic"
 )
 
-const bufferSize = 65526
+const bufferSize = 65536
 
-// Batch interface is used to write batch messages.
-type Batch interface {
-	// SetConcurrency sets a callback function concurrency to enable auto batch writer for improving throughput.
-	SetConcurrency(concurrency func() int)
+// BufferedOutput sets the buffered writer with the buffer size.
+type BufferedOutput interface {
+	SetBufferedOutput(bufferSize int)
 }
 
-// Scheduler interface is used to set scheduling option.
-type Scheduler interface {
-	// SetScheduling sets scheduling option.
-	SetScheduling(bool)
+// BufferedInput sets the read buffer size.
+type BufferedInput interface {
+	SetBufferedInput(bufferSize int)
 }
 
 // Messages interface is used to read and write message.
@@ -56,25 +54,17 @@ type messages struct {
 }
 
 // NewMessages returns a new messages.
-func NewMessages(rwc io.ReadWriteCloser, shared bool, writeBufferSize int, readBufferSize int) Messages {
-	if writeBufferSize < 1 {
-		writeBufferSize = bufferSize
-	}
-	if readBufferSize < 1 {
-		readBufferSize = bufferSize
-	}
-	writeBufferSize += 10
-	readBufferSize += 10
+func NewMessages(rwc io.ReadWriteCloser, shared bool) Messages {
 	var readBuffer []byte
 	var writeBuffer []byte
 	var readPool *buffer.Pool
 	var writePool *buffer.Pool
 	if shared {
-		readPool = buffer.AssignPool(readBufferSize)
-		writePool = buffer.AssignPool(writeBufferSize)
+		readPool = buffer.AssignPool(bufferSize)
+		writePool = buffer.AssignPool(bufferSize)
 	} else {
-		readBuffer = make([]byte, readBufferSize)
-		writeBuffer = make([]byte, writeBufferSize)
+		readBuffer = make([]byte, bufferSize)
+		writeBuffer = make([]byte, bufferSize)
 	}
 	return &messages{
 		shared:          shared,
@@ -82,8 +72,8 @@ func NewMessages(rwc io.ReadWriteCloser, shared bool, writeBufferSize int, readB
 		reader:          rwc,
 		writer:          rwc,
 		closer:          rwc,
-		writeBufferSize: writeBufferSize,
-		readBufferSize:  readBufferSize,
+		writeBufferSize: bufferSize,
+		readBufferSize:  bufferSize,
 		readBuffer:      readBuffer,
 		writeBuffer:     writeBuffer,
 		readPool:        readPool,
@@ -91,25 +81,40 @@ func NewMessages(rwc io.ReadWriteCloser, shared bool, writeBufferSize int, readB
 	}
 }
 
-func (m *messages) SetScheduling(scheduling bool) {
-	m.scheduling = scheduling
-}
-
-func (m *messages) SetConcurrency(concurrency func() int) {
-	if concurrency == nil {
-		if w, ok := m.writer.(*writer.Writer); ok {
-			w.Close()
-		}
-		m.writing.Lock()
-		m.writer = m.rwc
-		m.writing.Unlock()
-		return
-	}
+// SetBufferedOutput sets the buffered writer with the buffer size.
+func (m *messages) SetBufferedOutput(writeBufferSize int) {
 	m.writing.Lock()
-	if _, ok := m.writer.(*writer.Writer); !ok {
-		m.writer = writer.NewWriter(m.writer, concurrency, 65536, m.scheduling || m.shared)
+	if w, ok := m.writer.(*writer.Writer); ok {
+		w.Close()
+	}
+	if writeBufferSize > 0 {
+		m.writer = writer.NewWriter(m.rwc, writeBufferSize)
+	} else {
+		m.writer = m.rwc
+		writeBufferSize = bufferSize
+	}
+	m.writeBufferSize = writeBufferSize
+	if m.shared {
+		m.writePool = buffer.AssignPool(writeBufferSize)
+	} else {
+		m.writeBuffer = make([]byte, writeBufferSize)
 	}
 	m.writing.Unlock()
+}
+
+// SetBufferedInput sets the read buffer size.
+func (m *messages) SetBufferedInput(readBufferSize int) {
+	if readBufferSize < 1 {
+		readBufferSize = bufferSize
+	}
+	m.reading.Lock()
+	m.readBufferSize = readBufferSize
+	if m.shared {
+		m.readPool = buffer.AssignPool(readBufferSize)
+	} else {
+		m.readBuffer = make([]byte, readBufferSize)
+	}
+	m.reading.Unlock()
 }
 
 func (m *messages) ReadMessage(buf []byte) (p []byte, err error) {

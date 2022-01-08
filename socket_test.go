@@ -619,6 +619,8 @@ func testSocketServeMessages(serverSock Socket, clientSock Socket, t *testing.T)
 		t.Error(err)
 	}
 	messages := conn.Messages()
+	messages.(BufferedOutput).SetBufferedOutput(bufferSize)
+	messages.(BufferedInput).SetBufferedInput(bufferSize)
 	str := "Hello World"
 	str = strings.Repeat(str, 50)
 	messages.WriteMessage([]byte(str))

@@ -13,17 +13,18 @@ import (
 func TestMessages(t *testing.T) {
 	name := "tmpTestMessages"
 	file, _ := os.Create(name)
-	defer os.Remove(name)
-	messages := NewMessages(file, true, 64, 2)
-	concurrency := func() int {
-		return 1
-	}
+	messages := NewMessages(file, true)
 	str := strings.Repeat("Hello World", 50)
 	err := messages.WriteMessage([]byte(str))
 	if err != nil {
 		t.Log(err)
 	}
 	file.Seek(0, os.SEEK_SET)
+	messages.(BufferedOutput).SetBufferedOutput(0)
+	messages.(BufferedOutput).SetBufferedOutput(64)
+	messages.(BufferedOutput).SetBufferedOutput(64)
+	messages.(BufferedInput).SetBufferedInput(0)
+	messages.(BufferedInput).SetBufferedInput(2)
 	if msg, err := messages.ReadMessage(make([]byte, 65536)); err != nil {
 		t.Error(err)
 	} else if string(msg) != str {
@@ -32,12 +33,9 @@ func TestMessages(t *testing.T) {
 	if _, err := messages.ReadMessage(nil); err != io.EOF {
 		t.Error(err)
 	}
-	messages.(Batch).SetConcurrency(concurrency)
-	messages.(Batch).SetConcurrency(nil)
-	messages.(Batch).SetConcurrency(concurrency)
-	messages.(Scheduler).SetScheduling(false)
 	messages.Close()
 	messages.Close()
+	os.Remove(name)
 }
 
 func TestMessagesRetain(t *testing.T) {

@@ -21,7 +21,7 @@ type TCPConn struct {
 
 // Messages returns a new Messages.
 func (c *TCPConn) Messages() Messages {
-	return NewMessages(c.Conn, false, 0, 0)
+	return NewMessages(c.Conn, false)
 }
 
 // Connection returns the net.Conn.
@@ -206,7 +206,7 @@ func (l *TCPListener) ServeMessages(opened func(Messages) (Context, error), serv
 			}
 			conn = tlsConn
 		}
-		messages := NewMessages(conn, true, 0, 0)
+		messages := NewMessages(conn, true)
 		return opened(messages)
 	}
 	Serve := func(context netpoll.Context) error {
