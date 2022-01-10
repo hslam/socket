@@ -5,11 +5,12 @@ package socket
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"io/ioutil"
 )
 
-// LoadTLSConfig returns a TLS config by loading the certificate file and the key file.
-func LoadTLSConfig(certFile, keyFile string) (*tls.Config, error) {
+// LoadServerTLSConfig returns a server TLS config by loading the certificate file and the key file.
+func LoadServerTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 	certPEMBlock, err := ioutil.ReadFile(certFile)
 	if err != nil {
 		return nil, err
@@ -18,11 +19,20 @@ func LoadTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	return TLSConfig(certPEMBlock, keyPEMBlock), nil
+	return ServerTLSConfig(certPEMBlock, keyPEMBlock), nil
 }
 
-// TLSConfig returns a TLS config by the certificate data and the key data.
-func TLSConfig(certPEM []byte, keyPEM []byte) *tls.Config {
+// LoadClientTLSConfig returns a client TLS config by loading the certificate file.
+func LoadClientTLSConfig(certFile, serverName string) (*tls.Config, error) {
+	certPEM, err := ioutil.ReadFile(certFile)
+	if err != nil {
+		return nil, err
+	}
+	return ClientTLSConfig(certPEM, serverName), nil
+}
+
+// ServerTLSConfig returns a server TLS config by the certificate data and the key data.
+func ServerTLSConfig(certPEM []byte, keyPEM []byte) *tls.Config {
 	tlsCert, err := tls.X509KeyPair(certPEM, keyPEM)
 	if err != nil {
 		panic(err)
@@ -30,12 +40,21 @@ func TLSConfig(certPEM []byte, keyPEM []byte) *tls.Config {
 	return &tls.Config{Certificates: []tls.Certificate{tlsCert}}
 }
 
-// DefalutTLSConfig returns a default TLS config.
-func DefalutTLSConfig() *tls.Config {
-	return TLSConfig(DefaultCertPEM, DefaultKeyPEM)
+// ClientTLSConfig returns a client TLS config by the certificate data.
+func ClientTLSConfig(certPEM []byte, serverName string) *tls.Config {
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(certPEM) {
+		panic("failed to append certificates")
+	}
+	return &tls.Config{RootCAs: certPool, ServerName: serverName}
 }
 
-// SkipVerifyTLSConfig returns a insecure skip verify TLS config.
+// DefalutTLSConfig returns a default server TLS config.
+func DefalutTLSConfig() *tls.Config {
+	return ServerTLSConfig(DefaultCertPEM, DefaultKeyPEM)
+}
+
+// SkipVerifyTLSConfig returns a client TLS config which skips security verification.
 func SkipVerifyTLSConfig() *tls.Config {
 	return &tls.Config{InsecureSkipVerify: true}
 }
