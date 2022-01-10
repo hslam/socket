@@ -20,12 +20,13 @@ func TestSocket(t *testing.T) {
 	testSocket(NewHTTPSocket(nil), NewHTTPSocket(nil), "http", t)
 	testSocket(NewWSSocket(nil), NewWSSocket(nil), "ws", t)
 	testSocket(NewINPROCSocket(nil), NewINPROCSocket(nil), "inproc", t)
-	testSocket(NewTCPSocket(DefalutTLSConfig()), NewTCPSocket(SkipVerifyTLSConfig()), "tcps", t)
-	testSocket(NewUNIXSocket(DefalutTLSConfig()), NewUNIXSocket(SkipVerifyTLSConfig()), "unixs", t)
-	testSocket(NewHTTPSocket(DefalutTLSConfig()), NewHTTPSocket(SkipVerifyTLSConfig()), "https", t)
-	testSocket(NewWSSocket(DefalutTLSConfig()), NewWSSocket(SkipVerifyTLSConfig()), "wss", t)
-	testSocket(NewINPROCSocket(DefalutTLSConfig()), NewINPROCSocket(SkipVerifyTLSConfig()), "inprocs", t)
+	testSocket(NewTCPSocket(DefalutServerTLSConfig()), NewTCPSocket(SkipVerifyTLSConfig()), "tcps", t)
+	testSocket(NewUNIXSocket(DefalutServerTLSConfig()), NewUNIXSocket(SkipVerifyTLSConfig()), "unixs", t)
+	testSocket(NewHTTPSocket(DefalutServerTLSConfig()), NewHTTPSocket(SkipVerifyTLSConfig()), "https", t)
+	testSocket(NewWSSocket(DefalutServerTLSConfig()), NewWSSocket(SkipVerifyTLSConfig()), "wss", t)
+	testSocket(NewINPROCSocket(DefalutServerTLSConfig()), NewINPROCSocket(SkipVerifyTLSConfig()), "inprocs", t)
 	testTCPSocket(NewTCPSocket(nil), NewTCPSocket(nil), "tcp", t)
+	testSocket(NewTCPSocket(DefalutServerTLSConfig()), NewTCPSocket(DefalutClientTLSConfig()), "tcps", t)
 }
 
 func testSocket(serverSock Socket, clientSock Socket, scheme string, t *testing.T) {
@@ -168,11 +169,11 @@ func testTCPSocket(serverSock Socket, clientSock Socket, scheme string, t *testi
 func TestSocketTLS(t *testing.T) {
 	config := SkipVerifyTLSConfig()
 	config.InsecureSkipVerify = false
-	testSocketTLS(NewTCPSocket(DefalutTLSConfig()), NewTCPSocket(config), t)
-	testSocketTLS(NewUNIXSocket(DefalutTLSConfig()), NewUNIXSocket(config), t)
-	testSocketTLS(NewHTTPSocket(DefalutTLSConfig()), NewHTTPSocket(config), t)
-	testSocketTLS(NewWSSocket(DefalutTLSConfig()), NewWSSocket(config), t)
-	testSocketTLS(NewINPROCSocket(DefalutTLSConfig()), NewINPROCSocket(config), t)
+	testSocketTLS(NewTCPSocket(DefalutServerTLSConfig()), NewTCPSocket(config), t)
+	testSocketTLS(NewUNIXSocket(DefalutServerTLSConfig()), NewUNIXSocket(config), t)
+	testSocketTLS(NewHTTPSocket(DefalutServerTLSConfig()), NewHTTPSocket(config), t)
+	testSocketTLS(NewWSSocket(DefalutServerTLSConfig()), NewWSSocket(config), t)
+	testSocketTLS(NewINPROCSocket(DefalutServerTLSConfig()), NewINPROCSocket(config), t)
 }
 
 func testSocketTLS(serverSock Socket, clientSock Socket, t *testing.T) {
@@ -262,11 +263,11 @@ func TestSocketServeData(t *testing.T) {
 	testSocketServeData(NewHTTPSocket(nil), NewHTTPSocket(nil), t)
 	testSocketServeData(NewWSSocket(nil), NewWSSocket(nil), t)
 	testSocketServeData(NewINPROCSocket(nil), NewINPROCSocket(nil), t)
-	testSocketServeData(NewTCPSocket(DefalutTLSConfig()), NewTCPSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeData(NewHTTPSocket(DefalutTLSConfig()), NewHTTPSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeData(NewWSSocket(DefalutTLSConfig()), NewWSSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeData(NewUNIXSocket(DefalutTLSConfig()), NewUNIXSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeData(NewINPROCSocket(DefalutTLSConfig()), NewINPROCSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeData(NewTCPSocket(DefalutServerTLSConfig()), NewTCPSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeData(NewHTTPSocket(DefalutServerTLSConfig()), NewHTTPSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeData(NewWSSocket(DefalutServerTLSConfig()), NewWSSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeData(NewUNIXSocket(DefalutServerTLSConfig()), NewUNIXSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeData(NewINPROCSocket(DefalutServerTLSConfig()), NewINPROCSocket(SkipVerifyTLSConfig()), t)
 }
 
 func testSocketServeData(serverSock Socket, clientSock Socket, t *testing.T) {
@@ -414,11 +415,11 @@ func testSocketServeDataServe(serverSock Socket, clientSock Socket, t *testing.T
 func TestSocketServeDataTLS(t *testing.T) {
 	config := SkipVerifyTLSConfig()
 	config.InsecureSkipVerify = false
-	testSocketServeDataTLS(NewTCPSocket(DefalutTLSConfig()), NewTCPSocket(config), t)
-	testSocketServeDataTLS(NewHTTPSocket(DefalutTLSConfig()), NewHTTPSocket(config), t)
-	testSocketServeDataTLS(NewWSSocket(DefalutTLSConfig()), NewWSSocket(config), t)
-	testSocketServeDataTLS(NewUNIXSocket(DefalutTLSConfig()), NewUNIXSocket(config), t)
-	testSocketServeDataTLS(NewINPROCSocket(DefalutTLSConfig()), NewINPROCSocket(config), t)
+	testSocketServeDataTLS(NewTCPSocket(DefalutServerTLSConfig()), NewTCPSocket(config), t)
+	testSocketServeDataTLS(NewHTTPSocket(DefalutServerTLSConfig()), NewHTTPSocket(config), t)
+	testSocketServeDataTLS(NewWSSocket(DefalutServerTLSConfig()), NewWSSocket(config), t)
+	testSocketServeDataTLS(NewUNIXSocket(DefalutServerTLSConfig()), NewUNIXSocket(config), t)
+	testSocketServeDataTLS(NewINPROCSocket(DefalutServerTLSConfig()), NewINPROCSocket(config), t)
 }
 
 func testSocketServeDataTLS(serverSock Socket, clientSock Socket, t *testing.T) {
@@ -453,11 +454,11 @@ func TestSocketServeConn(t *testing.T) {
 	testSocketServeConn(NewHTTPSocket(nil), NewHTTPSocket(nil), t)
 	testSocketServeConn(NewWSSocket(nil), NewWSSocket(nil), t)
 	testSocketServeConn(NewINPROCSocket(nil), NewINPROCSocket(nil), t)
-	testSocketServeConn(NewTCPSocket(DefalutTLSConfig()), NewTCPSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeConn(NewHTTPSocket(DefalutTLSConfig()), NewHTTPSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeConn(NewWSSocket(DefalutTLSConfig()), NewWSSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeConn(NewUNIXSocket(DefalutTLSConfig()), NewUNIXSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeConn(NewINPROCSocket(DefalutTLSConfig()), NewINPROCSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeConn(NewTCPSocket(DefalutServerTLSConfig()), NewTCPSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeConn(NewHTTPSocket(DefalutServerTLSConfig()), NewHTTPSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeConn(NewWSSocket(DefalutServerTLSConfig()), NewWSSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeConn(NewUNIXSocket(DefalutServerTLSConfig()), NewUNIXSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeConn(NewINPROCSocket(DefalutServerTLSConfig()), NewINPROCSocket(SkipVerifyTLSConfig()), t)
 }
 
 func testSocketServeConn(serverSock Socket, clientSock Socket, t *testing.T) {
@@ -526,11 +527,11 @@ func testSocketServeConn(serverSock Socket, clientSock Socket, t *testing.T) {
 func TestSocketServeConnTLS(t *testing.T) {
 	config := SkipVerifyTLSConfig()
 	config.InsecureSkipVerify = false
-	testSocketServeConnTLS(NewTCPSocket(DefalutTLSConfig()), NewTCPSocket(config), t)
-	testSocketServeConnTLS(NewHTTPSocket(DefalutTLSConfig()), NewHTTPSocket(config), t)
-	testSocketServeConnTLS(NewWSSocket(DefalutTLSConfig()), NewWSSocket(config), t)
-	testSocketServeConnTLS(NewUNIXSocket(DefalutTLSConfig()), NewUNIXSocket(config), t)
-	testSocketServeConnTLS(NewINPROCSocket(DefalutTLSConfig()), NewINPROCSocket(config), t)
+	testSocketServeConnTLS(NewTCPSocket(DefalutServerTLSConfig()), NewTCPSocket(config), t)
+	testSocketServeConnTLS(NewHTTPSocket(DefalutServerTLSConfig()), NewHTTPSocket(config), t)
+	testSocketServeConnTLS(NewWSSocket(DefalutServerTLSConfig()), NewWSSocket(config), t)
+	testSocketServeConnTLS(NewUNIXSocket(DefalutServerTLSConfig()), NewUNIXSocket(config), t)
+	testSocketServeConnTLS(NewINPROCSocket(DefalutServerTLSConfig()), NewINPROCSocket(config), t)
 }
 
 func testSocketServeConnTLS(serverSock Socket, clientSock Socket, t *testing.T) {
@@ -578,11 +579,11 @@ func TestSocketServeMessages(t *testing.T) {
 	testSocketServeMessages(NewHTTPSocket(nil), NewHTTPSocket(nil), t)
 	testSocketServeMessages(NewWSSocket(nil), NewWSSocket(nil), t)
 	testSocketServeMessages(NewINPROCSocket(nil), NewINPROCSocket(nil), t)
-	testSocketServeMessages(NewTCPSocket(DefalutTLSConfig()), NewTCPSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeMessages(NewHTTPSocket(DefalutTLSConfig()), NewHTTPSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeMessages(NewWSSocket(DefalutTLSConfig()), NewWSSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeMessages(NewUNIXSocket(DefalutTLSConfig()), NewUNIXSocket(SkipVerifyTLSConfig()), t)
-	testSocketServeMessages(NewINPROCSocket(DefalutTLSConfig()), NewINPROCSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeMessages(NewTCPSocket(DefalutServerTLSConfig()), NewTCPSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeMessages(NewHTTPSocket(DefalutServerTLSConfig()), NewHTTPSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeMessages(NewWSSocket(DefalutServerTLSConfig()), NewWSSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeMessages(NewUNIXSocket(DefalutServerTLSConfig()), NewUNIXSocket(SkipVerifyTLSConfig()), t)
+	testSocketServeMessages(NewINPROCSocket(DefalutServerTLSConfig()), NewINPROCSocket(SkipVerifyTLSConfig()), t)
 }
 
 func testSocketServeMessages(serverSock Socket, clientSock Socket, t *testing.T) {
@@ -639,11 +640,11 @@ func testSocketServeMessages(serverSock Socket, clientSock Socket, t *testing.T)
 func TestSocketServeMessagesTLS(t *testing.T) {
 	config := SkipVerifyTLSConfig()
 	config.InsecureSkipVerify = false
-	testSocketServeMessagesTLS(NewTCPSocket(DefalutTLSConfig()), NewTCPSocket(config), t)
-	testSocketServeMessagesTLS(NewHTTPSocket(DefalutTLSConfig()), NewHTTPSocket(config), t)
-	testSocketServeMessagesTLS(NewWSSocket(DefalutTLSConfig()), NewWSSocket(config), t)
-	testSocketServeMessagesTLS(NewUNIXSocket(DefalutTLSConfig()), NewUNIXSocket(config), t)
-	testSocketServeMessagesTLS(NewINPROCSocket(DefalutTLSConfig()), NewINPROCSocket(config), t)
+	testSocketServeMessagesTLS(NewTCPSocket(DefalutServerTLSConfig()), NewTCPSocket(config), t)
+	testSocketServeMessagesTLS(NewHTTPSocket(DefalutServerTLSConfig()), NewHTTPSocket(config), t)
+	testSocketServeMessagesTLS(NewWSSocket(DefalutServerTLSConfig()), NewWSSocket(config), t)
+	testSocketServeMessagesTLS(NewUNIXSocket(DefalutServerTLSConfig()), NewUNIXSocket(config), t)
+	testSocketServeMessagesTLS(NewINPROCSocket(DefalutServerTLSConfig()), NewINPROCSocket(config), t)
 }
 
 func testSocketServeMessagesTLS(serverSock Socket, clientSock Socket, t *testing.T) {
@@ -695,6 +696,11 @@ func TestNewSocket(t *testing.T) {
 	if sock, err := NewSocket("ws", nil); err != nil {
 		t.Error(err)
 	} else if _, ok := sock.(*WS); !ok {
+		t.Error(sock)
+	}
+	if sock, err := NewSocket("inproc", nil); err != nil {
+		t.Error(err)
+	} else if _, ok := sock.(*INPROC); !ok {
 		t.Error(sock)
 	}
 	if _, err := NewSocket("", nil); err != ErrNetwork {

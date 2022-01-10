@@ -135,7 +135,7 @@ func TestHTTPSocketAccept(t *testing.T) {
 
 func TestHTTPSocketAcceptTLS(t *testing.T) {
 	var (
-		serverSock = NewHTTPSocket(DefalutTLSConfig())
+		serverSock = NewHTTPSocket(DefalutServerTLSConfig())
 		clientSock = NewWSSocket(SkipVerifyTLSConfig())
 	)
 	var addr = ":9999"

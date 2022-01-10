@@ -64,7 +64,9 @@ func (t *HTTP) Dial(address string) (Conn, error) {
 		return nil, err
 	}
 	if t.Config != nil {
-		t.Config.ServerName = address
+		if t.Config.ServerName == "" {
+			t.Config.ServerName = parseHost(address)
+		}
 		tlsConn := tls.Client(conn, t.Config)
 		if err = tlsConn.Handshake(); err != nil {
 			conn.Close()

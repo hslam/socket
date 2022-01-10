@@ -52,7 +52,9 @@ func (t *INPROC) Dial(address string) (Conn, error) {
 	if t.Config == nil {
 		return &INPROConn{conn}, err
 	}
-	t.Config.ServerName = address
+	if t.Config.ServerName == "" {
+		t.Config.ServerName = parseHost(address)
+	}
 	tlsConn := tls.Client(conn, t.Config)
 	if err = tlsConn.Handshake(); err != nil {
 		conn.Close()
