@@ -3,9 +3,9 @@ module github.com/hslam/socket
 go 1.15
 
 require (
-	github.com/hslam/buffer v0.0.0-20211027181515-93d623f7e213
-	github.com/hslam/inproc v0.0.0-20210808071438-d2fc848886cb
-	github.com/hslam/netpoll v0.0.4-0.20211030051742-b79942b30072
-	github.com/hslam/websocket v0.1.1-0.20220118110831-fe7474801cd7
-	github.com/hslam/writer v1.0.1-0.20220108105338-c33900c250b4
+	github.com/hslam/buffer v0.0.0-20230217202846-e7b1b6ebf283
+	github.com/hslam/inproc v0.0.0-20210912032833-46957e53529f
+	github.com/hslam/netpoll v0.0.4-0.20230219164802-be4599214e92
+	github.com/hslam/websocket v0.1.1-0.20230219165601-dea25cc01701
+	github.com/hslam/writer v1.0.1-0.20230219134043-3ef1105e8b6a
 )
